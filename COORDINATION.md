@@ -2,7 +2,7 @@
 
 | Task | Status | Session | Scope |
 | --- | --- | --- | --- |
-| Import and integrate LIVPBP, verify operation, and deploy | in progress | arena-d0b46ba5 | All repository files (integration) |
+| Import and integrate LIVPBP, verify operation, and deploy | needs review | arena-d0b46ba5 | All repository files (integration) |
 
 Claimed 2026-11-25 UTC. This session uses the Arena-assigned branch rather than renaming it.
 
@@ -12,3 +12,5 @@ Claimed 2026-11-25 UTC. This session uses the Arena-assigned branch rather than 
 - `node tools/restoration-check.mjs` and `npm ci && npm test` passed; the latter includes 64 offline fixture checks and local HTML asset links.
 - Needs review: upstream historical verification claims were copied, not independently reverified line by line; live upcoming-game alerts and all possible runtime values remain unverified. These limitations are published on Flagged for Review. Official source links on replay and game-table rows are retained from upstream.
 - PR [#1](https://github.com/kanlerxz87-cyber/Alert3/pull/1): site checks passed. The copied Pages-delivery check failed on the PR before this site had ever been deployed to this repository; its precise failure cause is unverified because its remote log download was inaccessible in this environment. Changed it to run after a successful Pages build or manually, since it checks published content rather than the PR preview. Deployment verification remains required after merge.
+
+- [PR #1](https://github.com/kanlerxz87-cyber/Alert3/pull/1) merged as `e4715441c70d5895816c0e219bbb1811ed5dbe36`. [Pages deployment](https://github.com/kanlerxz87-cyber/Alert3/actions/runs/45697521485) and [published delivery check](https://github.com/kanlerxz87-cyber/Alert3/actions/runs/45697622378) succeeded. The published replay page rendered 15 games on the requested date. Live-game operation and comprehensive independent verification remain flagged above.
