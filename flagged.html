@@ -1118,6 +1118,68 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
       </tbody>
     </table>
 
+
+    <h2 id="final-integration">16. Final integration re-verification (session <code>arena-84333e7f</code>, 2026-11-25)</h2>
+    <p>
+      This section re-checks the combined site after PRs <a href="https://github.com/kanlerxz87-cyber/Alert3/pull/1" target="_blank" rel="noopener">#1</a>–<a href="https://github.com/kanlerxz87-cyber/Alert3/pull/7" target="_blank" rel="noopener">#7</a> were merged. The full line-by-line report is <a href="docs/final-integration-2026-11-25.md">docs/final-integration-2026-11-25.md</a>; prior independent records are preserved in <a href="flagged-55cc1142.html">Flagged for Review — companion copy verification</a>. Every row links its official source. Values that cannot be officially confirmed are left blank and marked unverified.
+    </p>
+    <table class="verify">
+      <thead>
+        <tr><th>#</th><th>Re-verified item</th><th>Confirmed official value</th><th>Official source</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>F-01</td>
+          <td class="wrap">2026-08-26 official slate and all 15 game rows.</td>
+          <td class="wrap"><code>totalGames: 15</code>; all 15 <code>gamePk</code>, team, score and <code>Final</code> status values are listed in the full report.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;fields=totalGames,dates,date,totalGames,games,gamePk,teams,away,home,team,name,score,status,detailedState" target="_blank" rel="noopener">MLB schedule 2026-08-26</a> · <a href="docs/final-integration-2026-11-25.md">line-by-line table</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>F-02</td>
+          <td class="wrap">Reference review rows and official challenge counters.</td>
+          <td class="wrap"><code>823096:36:MF</code>, <code>823180:57:MA</code>, <code>823180:84:NF</code>, resolved scores, challenger IDs and MGR/ABS counters match the official responses.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/game/823096/playByPlay" target="_blank" rel="noopener">playByPlay 823096</a> · <a href="https://statsapi.mlb.com/api/v1/game/823180/playByPlay" target="_blank" rel="noopener">playByPlay 823180</a> · <a href="https://statsapi.mlb.com/api/v1.1/game/823096/feed/live?fields=gameData,review,absChallenges,hasChallenges,away,home,used,remaining,usedSuccessful,usedFailed" target="_blank" rel="noopener">counters 823096</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>F-03</td>
+          <td class="wrap">Offseason and upcoming game days.</td>
+          <td class="wrap"><code>2026-11-25</code>: 0 games; first upcoming official date <code>2027-02-19</code>: 17 games; <code>2027-03-25</code>: 14 <code>Preview</code> games. The published scoreboard rendered 17 and 14 scheduled cards.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-11-25&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">schedule 2026-11-25</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2027-02-19&amp;fields=totalGames,dates,date,totalGames,games,gamePk,status,abstractGameState,detailedState,statusCode" target="_blank" rel="noopener">schedule 2027-02-19</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2027-03-25&amp;fields=totalGames,dates,date,totalGames,games,gamePk,status,abstractGameState,detailedState,statusCode" target="_blank" rel="noopener">schedule 2027-03-25</a> · <a href="index.html?date=2027-02-19">published upcoming scoreboard</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>F-04</td>
+          <td class="wrap">Project-prefix 404 page and local site links.</td>
+          <td class="wrap">The published 404 page resolves “Back to scoreboard” to <code>/Alert3/index.html</code>; <code>tests/link-check.mjs</code> and <code>tests/provenance-check.mjs</code> check local references and table-row source links.</td>
+          <td class="wrap"><a href="404.html">published 404.html</a> · <a href="https://api.github.com/repos/kanlerxz87-cyber/Alert3/pages" target="_blank" rel="noopener">Alert3 Pages API</a> · <a href="https://github.com/kanlerxz87-cyber/Alert3/actions/workflows/site-check.yml" target="_blank" rel="noopener">Site checks workflow</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>F-05</td>
+          <td class="wrap">Real-time alerts, sound cues, notifications and before-review score capture during an actual upcoming live game.</td>
+          <td class="wrap"></td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-11-25&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">official schedule 2026-11-25</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2027-02-19&amp;fields=totalGames,dates,date,totalGames,games,gamePk,status,abstractGameState,detailedState,statusCode" target="_blank" rel="noopener">upcoming 2027-02-19 slate</a></td>
+          <td class="status-unverified">Unverified (offseason) — flagged</td>
+        </tr>
+        <tr>
+          <td>F-06</td>
+          <td class="wrap">All possible runtime values, client scan times, local tracked-entry counts, and the exact cause of the earlier reference/copy snapshot difference.</td>
+          <td class="wrap"></td>
+          <td class="wrap"><a href="reviews.html?date=2026-08-26">published replay feed</a> · <a href="https://snapquast73-boop.github.io/LIVPBP/reviews.html?date=2026-08-26" target="_blank" rel="noopener">reference replay feed</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;fields=totalGames,dates,date,totalGames,games,gamePk,teams,away,home,team,name,score,status,detailedState" target="_blank" rel="noopener">official 2026-08-26 slate</a></td>
+          <td class="status-unverified">Unverified — flagged</td>
+        </tr>
+        <tr>
+          <td>F-07</td>
+          <td class="wrap">Historical upstream “verified” status claims in sections 1–14 and the exact deep-404 delivery result from this browser tool.</td>
+          <td class="wrap"></td>
+          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/tree/5c02527d3c7a56ea66c698cfabff80a407b6dfd3" target="_blank" rel="noopener">upstream commit 5c02527</a> · <a href="https://github.com/kanlerxz87-cyber/Alert3/actions/workflows/pages-delivery.yml" target="_blank" rel="noopener">Published Pages delivery workflow</a> · <a href="docs/final-integration-2026-11-25.md">final integration report</a></td>
+          <td class="status-flag">Flagged for review; not independently claimed as verified</td>
+        </tr>
+      </tbody>
+    </table>
+
   </main>
 
   <footer class="site-footer">
@@ -1125,7 +1187,7 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
       Unofficial fan project. Data via the public MLB StatsAPI
       (<a href="https://statsapi.mlb.com" target="_blank" rel="noopener">statsapi.mlb.com</a>).
       Not affiliated with MLB or MLB Advanced Media.
-      Verification log: <a href="docs/verification-report.md">docs/verification-report.md</a> ·
+      Verification log: <a href="docs/verification-report.md">docs/verification-report.md</a> · <a href="docs/final-integration-2026-11-25.md">final integration report</a> ·
       coordination: <a href="COORDINATION.md">COORDINATION.md</a>.
     </p>
   </footer>
