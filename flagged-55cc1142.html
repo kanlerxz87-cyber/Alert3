@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flagged for Review — Alert3 copy verification (session 55cc1142)</title>
+  <meta name="description" content="Flagged irregularities and unverified values from the independent verification of the Alert3 copy of the MLB Live PBP replay feed, with official source links.">
+  <style>
+    body { margin:0; padding:24px; background:#0f141b; color:#e8eef5; font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    a { color:#7ec8ff; }
+    h1 { margin:0 0 6px; font-size:26px; }
+    h2 { margin-top:32px; font-size:19px; border-bottom:1px solid #2b3644; padding-bottom:6px; }
+    .nav a { display:inline-block; margin:10px 14px 0 0; }
+    .note { color:#a8b6c6; max-width:900px; }
+    table { border-collapse:collapse; width:100%; margin-top:12px; }
+    th, td { border:1px solid #2b3644; padding:8px 10px; text-align:left; vertical-align:top; }
+    th { background:#182230; }
+    code { background:#1b2531; padding:1px 4px; border-radius:3px; }
+    .flag { color:#ffb454; font-weight:600; }
+    .ok { color:#7ee0a1; }
+    .unverified { color:#ff8f8f; font-weight:600; }
+    .wrap { overflow-x:auto; }
+  </style>
+</head>
+<body>
+  <h1>⚑ Flagged for Review — Alert3 copy verification</h1>
+  <p class="note">
+    Session <code>arena-55cc1142</code>, 2026-11-25 UTC. This page is a clearly labelled companion to
+    <a href="flagged.html">the main Flagged for Review page</a>. It lists only items found during the
+    independent verification of the copy of
+    <a href="https://github.com/snapquast73-boop/LIVPBP/tree/5c02527d3c7a56ea66c698cfabff80a407b6dfd3">upstream LIVPBP @ 5c02527</a>.
+    Every row carries a source link. No value is inferred: where no official source publishes a value,
+    the confirmed-value cell is left blank and the row is marked <span class="unverified">unverified</span>.
+    Full detail: <a href="audit/independent-copy-verification-2026-11-25.md">audit/independent-copy-verification-2026-11-25.md</a>.
+    Flagged items are <em>needs review</em> and do not block the merge.
+  </p>
+  <p class="nav">
+    <a href="index.html">← Scoreboard</a>
+    <a href="reviews.html">🚨 Replay Feed</a>
+    <a href="flagged.html">Main Flagged page</a>
+    <a href="https://kanlerxz87-cyber.github.io/Alert3/flagged-55cc1142.html">Canonical URL</a>
+  </p>
+
+  <h2>1. Officially confirmed checks (read from the linked response)</h2>
+  <div class="wrap">
+  <table>
+    <thead><tr><th>ID</th><th>Claim</th><th>Official source</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>S-1</td><td>The official schedule for 2026-08-26 contains 15 games; games 823096 and 823180 are Final.</td><td><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;fields=dates,games,gamePk,gameDate,officialDate,status,abstractGameState,codedGameState,detailedState,teams,team,id,name,score">MLB StatsAPI schedule</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-2</td><td>PHI 6 – SEA 0 (game 823096) and CIN 10 – SF 9 (game 823180) final scores match the replay rows.</td><td><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;fields=dates,games,gamePk,gameDate,officialDate,status,abstractGameState,codedGameState,detailedState,teams,team,id,name,score">MLB StatsAPI schedule</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-3</td><td>823096 at-bat 36: <code>MF</code>, challengeTeamId 136, <code>isOverturned:false</code>, J.P. Crawford vs Jesús Luzardo, score 6–0.</td><td><a href="https://statsapi.mlb.com/api/v1/game/823096/playByPlay?fields=allPlays,about,atBatIndex,inning,halfInning,result,description,awayScore,homeScore,matchup,batter,pitcher,fullName,playEvents,index,details,reviewDetails,isOverturned,inProgress,reviewType,challengeTeamId">MLB playByPlay 823096</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-4</td><td>823180 at-bat 57: <code>MA</code>, challengeTeamId 137, <code>isOverturned:false</code>, Sal Stewart vs Ryan Walker, score 3–6.</td><td><a href="https://statsapi.mlb.com/api/v1/game/823180/playByPlay?fields=allPlays,about,atBatIndex,inning,halfInning,result,description,awayScore,homeScore,matchup,batter,pitcher,fullName,playEvents,index,details,reviewDetails,isOverturned,inProgress,reviewType,challengeTeamId">MLB playByPlay 823180</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-5</td><td>823180 at-bat 84: <code>NF</code>, <code>isOverturned:false</code>, score 10–9, upheld umpire reviews.</td><td><a href="https://statsapi.mlb.com/api/v1/game/823180/playByPlay?fields=allPlays,about,atBatIndex,inning,halfInning,result,description,awayScore,homeScore,playEvents,index,details,reviewDetails,isOverturned,inProgress,reviewType,challengeTeamId,player,fullName">MLB playByPlay 823180</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-6</td><td>Official registry: <code>MF</code> manager close play at 1st, <code>MA</code> manager tag play, <code>NF</code> umpire close play at 1st, <code>MJ</code> player pitch challenge.</td><td><a href="https://statsapi.mlb.com/api/v1/gameStatus">MLB gameStatus registry</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-7</td><td>Official challenge counters: game 823096 SEA 1 used / 0 left; game 823180 CIN 1 left / 2 ABS left, SF 0 MGR / 1 ABS left.</td><td><a href="https://statsapi.mlb.com/api/v1.1/game/823096/feed/live?fields=gameData,review,absChallenges,away,home,used,remaining,usedSuccessful,usedFailed">feed/live 823096</a> · <a href="https://statsapi.mlb.com/api/v1.1/game/823180/feed/live?fields=gameData,review,absChallenges,away,home,used,remaining,usedSuccessful,usedFailed">feed/live 823180</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-8</td><td>39 of the 40 imported files are byte-identical to the upstream commit; the only difference is the deliberately replaced task board.</td><td><a href="https://api.github.com/repos/snapquast73-boop/LIVPBP/git/trees/5c02527d3c7a56ea66c698cfabff80a407b6dfd3">upstream tree API</a> · <a href="https://github.com/kanlerxz87-cyber/Alert3/tree/arena/d0b46ba5-alert3">imported tree</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-9</td><td>Pages serves this repository from <code>main</code> at root as <code>https://kanlerxz87-cyber.github.io/Alert3/</code>, with custom 404 enabled.</td><td><a href="https://api.github.com/repos/kanlerxz87-cyber/Alert3/pages">GitHub Pages API</a></td><td class="ok">Verified</td></tr>
+      <tr><td>S-10</td><td>Offline suites on the imported snapshot: restoration checks passed; 64/64 smoke checks; 47 jsdom checks; 5/5 provenance checks.</td><td><a href="https://github.com/snapquast73-boop/LIVPBP/blob/5c02527d3c7a56ea66c698cfabff80a407b6dfd3/tests/run-all.mjs">tests/run-all.mjs</a> · <a href="https://github.com/snapquast73-boop/LIVPBP/blob/5c02527d3c7a56ea66c698cfabff80a407b6dfd3/tools/smoke-test.mjs">smoke-test.mjs</a></td><td class="ok">Verified locally</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>2. Flagged for review</h2>
+  <div class="wrap">
+  <table>
+    <thead><tr><th>ID</th><th>Item</th><th>Confirmed value</th><th>Source link</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>V-F1</td><td><code>404.html</code> tests for the literal path <code>/LIVPBP/</code> when computing <code>&lt;base&gt;</code>. On the Alert3 site that branch is never taken, so a nested 404 resolves CSS and the home link from <code>/</code>.</td><td>Base path is <code>/Alert3/</code> for published pages.</td><td><a href="https://github.com/kanlerxz87-cyber/Alert3/blob/arena/d0b46ba5-alert3/404.html">imported 404.html</a> · <a href="https://api.github.com/repos/kanlerxz87-cyber/Alert3/pages">Pages API</a></td><td class="flag">needs review — integration owner requested to adapt</td></tr>
+      <tr><td>V-F2</td><td>README "Live demo" still points at the upstream LIVPBP Pages site rather than this deployment.</td><td>Upstream URL retained.</td><td><a href="https://github.com/snapquast73-boop/LIVPBP/blob/5c02527d3c7a56ea66c698cfabff80a407b6dfd3/README.md">upstream README</a></td><td class="flag">needs review — documentation</td></tr>
+      <tr><td>V-F3</td><td>README tells users to reset to tag <code>v1.0.0-stable-checkpoint</code>; that tag was not present in Alert3 at claim time.</td><td></td><td><a href="https://api.github.com/repos/kanlerxz87-cyber/Alert3/git/refs/tags">Alert3 tags API</a> · <a href="https://api.github.com/repos/snapquast73-boop/LIVPBP/tags">upstream tags API</a></td><td class="unverified">unverified — blank</td></tr>
+      <tr><td>V-F4</td><td>Some tests and docs embed upstream <code>snapquast73-boop.github.io/LIVPBP</code> links as provenance. They resolve, but are not links into this deployment.</td><td>Upstream URLs retained.</td><td><a href="https://github.com/snapquast73-boop/LIVPBP/blob/5c02527d3c7a56ea66c698cfabff80a407b6dfd3/tests/jsdom-render-test.mjs">jsdom test</a></td><td class="flag">needs review — provenance, not runtime</td></tr>
+      <tr><td>V-F5</td><td>Historical verification and flagged claims copied from upstream were not independently re-verified line by line by this session; only §1–§2 above were re-checked.</td><td></td><td><a href="https://github.com/snapquast73-boop/LIVPBP/blob/5c02527d3c7a56ea66c698cfabff80a407b6dfd3/docs/verification-report.md">upstream verification report</a> · <a href="https://github.com/snapquast73-boop/LIVPBP/blob/5c02527d3c7a56ea66c698cfabff80a407b6dfd3/flagged.html">upstream flagged page</a></td><td class="unverified">unverified — blank</td></tr>
+      <tr><td>V-F6</td><td>The brief asks for <code>session-&lt;id&gt;/&lt;task&gt;</code> branches; Arena fixes each session to its assigned branch instead. All sessions work on their assigned branch.</td><td>This session: <code>arena/55cc1142-alert3</code>.</td><td><a href="https://github.com/kanlerxz87-cyber/Alert3/blob/arena/55cc1142-alert3/COORDINATION.md">COORDINATION.md</a></td><td class="flag">needs review — platform constraint</td></tr>
+      <tr><td>V-F7</td><td>Before-review score on all three replay rows ("not observed before ruling"). No official source records the score a browser happened to observe before the ruling.</td><td></td><td><a href="https://statsapi.mlb.com/api/v1/game/823096/playByPlay">MLB playByPlay 823096</a> · <a href="https://statsapi.mlb.com/api/v1/game/823180/playByPlay">MLB playByPlay 823180</a></td><td class="unverified">unverified — blank by design</td></tr>
+      <tr><td>V-F8</td><td>Reference footer metrics "scanned 3:38:34 PM · local log only" and "76 tracked entries" are client-side log values, not MLB data.</td><td></td><td><a href="https://snapquast73-boop.github.io/LIVPBP/reviews.html?date=2026-08-26">reference replay page</a></td><td class="unverified">unverified — blank</td></tr>
+      <tr><td>V-F9</td><td>Live alert behaviour for upcoming game days cannot be compared with an official ruling until such a ruling exists; no official source publishes future review events.</td><td></td><td><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1">MLB StatsAPI schedule</a></td><td class="unverified">unverified — blank</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="note">
+    Provenance: <a href="https://github.com/snapquast73-boop/LIVPBP/commit/5c02527d3c7a56ea66c698cfabff80a407b6dfd3">upstream commit 5c02527</a>
+    (MIT licensed). Data: <a href="https://statsapi.mlb.com/api/v1/">MLB StatsAPI</a>. Unofficial fan project; not affiliated with MLB.
+  </p>
+</body>
+</html>
