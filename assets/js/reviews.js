@@ -590,12 +590,16 @@
   }
 
   function numOrNull(v) {
+    if (v === null || v === undefined || v === '' || typeof v === 'boolean') return null;
     var n = Number(v);
     return isFinite(n) ? n : null;
   }
 
-  /* Counter that moved backwards between two observations = irregularity.
-   * Never silently corrected (README §"challenges-remaining tracker").
+  /* Used-counter that moved backwards between two observations = irregularity.
+   * Never silently corrected (README §"challenges-remaining tracker" & reviews.html footer).
+   * Only monotonic used-counters (`used`, `usedSuccessful`, `usedFailed`) are
+   * checked: `remaining` legitimately decreases on every failed challenge and can
+   * rise in extra innings, so decreasing `remaining` is normal live gameplay.
    * Accepts either flat `{ away, home }` or nested `{ manager, abs }` snapshots. */
   function counterRegression(prev, next) {
     if (!prev || !next) return null;
@@ -605,7 +609,7 @@
       ['away', 'home'].forEach(function (side) {
         var p = pRoot[side] || {};
         var n = nRoot[side] || {};
-        ['used', 'usedSuccessful', 'usedFailed', 'remaining'].forEach(function (field) {
+        ['used', 'usedSuccessful', 'usedFailed'].forEach(function (field) {
           if (typeof p[field] === 'number' && typeof n[field] === 'number' && n[field] < p[field]) {
             notes.push((prefix ? prefix + '.' : '') + side + '.' + field + ' moved backwards (' + p[field] + ' → ' + n[field] + ')');
           }

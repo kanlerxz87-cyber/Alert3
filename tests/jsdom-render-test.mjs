@@ -148,7 +148,7 @@ async function render(pageFile, { query = '', wait = 900, before } = {}) {
   html = html.replace(/<script\b[^>]*src\s*=\s*"[^"]+"[^>]*><\/script>/gi, '');
 
   const errors = [];
-  const url = `https://snapquast73-boop.github.io/LIVPBP/${pageFile}${query}`;
+  const url = `https://kanlerxz87-cyber.github.io/Alert3/${pageFile}${query}`;
   const dom = new JSDOM(html, {
     url,
     runScripts: 'outside-only',
@@ -298,6 +298,25 @@ console.log(`jsdom-render-test: ${LIVE ? 'LIVE official API' : 'fixtures'} mode`
   check('404: back link present', !!doc.querySelector('a[href="index.html"]'));
   check('404: no uncaught errors', errors.length === 0, errors.join(' | '));
   close();
+
+  const html404 = readFileSync(path.join(ROOT, '404.html'), 'utf8');
+  const pagesDom = new JSDOM(html404, {
+    url: 'https://kanlerxz87-cyber.github.io/Alert3/missing/deep/path',
+    runScripts: 'dangerously',
+  });
+  const pagesBase = pagesDom.window.document.querySelector('base');
+  const pagesBack = pagesDom.window.document.querySelector('a[href="index.html"]');
+  check('404: Pages base href resolves to /Alert3/', !!pagesBase && pagesBase.getAttribute('href') === '/Alert3/', String(pagesBase && pagesBase.getAttribute('href')));
+  check('404: Pages back link resolves under /Alert3/', !!pagesBack && pagesBack.href === 'https://kanlerxz87-cyber.github.io/Alert3/index.html', String(pagesBack && pagesBack.href));
+  pagesDom.window.close();
+
+  const localDom = new JSDOM(html404, {
+    url: 'http://localhost:8000/missing/deep/path',
+    runScripts: 'dangerously',
+  });
+  const localBase = localDom.window.document.querySelector('base');
+  check('404: localhost base href resolves to /', !!localBase && localBase.getAttribute('href') === '/', String(localBase && localBase.getAttribute('href')));
+  localDom.window.close();
 }
 
 console.log(`jsdom-render-test: ${passes.length} checks passed`);

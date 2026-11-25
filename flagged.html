@@ -42,9 +42,11 @@
     </div>
 
     <section aria-label="Copy verification limitations">
-      <h2>Copy verification limitations (2026-11-25)</h2>
-      <p>This site copies <a href="https://github.com/snapquast73-boop/LIVPBP/tree/5c02527d3c7a56ea66c698cfabff80a407b6dfd3">the upstream repository</a>. The historical verification entries below are upstream's records, not an independent line-by-line verification by this copy's integration session. Their claims and source links remain available for review.</p>
-      <p><strong>Unverified:</strong> behavior during an upcoming live game, including alerts, and every displayed value across all possible games. The integration session checked the <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;hydrate=review,probablePitcher,decisions,linescore">official MLB schedule for August 26, 2026</a> and ran the upstream offline tests; those checks cannot establish live-game correctness. Derived forecasts and review interpretations are not official MLB values. See the specific upstream flags below.</p>
+      <h2>Copy verification limitations &amp; Alert3 audit summary (2026-11-25)</h2>
+      <p>This site copies <a href="https://github.com/snapquast73-boop/LIVPBP/tree/5c02527d3c7a56ea66c698cfabff80a407b6dfd3" target="_blank" rel="noopener">the upstream repository</a> (<code>snapquast73-boop/LIVPBP @ 5c02527</code>, live reference <a href="https://snapquast73-boop.github.io/LIVPBP/reviews.html?date=2026-08-26" target="_blank" rel="noopener">LIVPBP/reviews.html?date=2026-08-26</a>). Sections 1–14 below preserve the upstream historical records and source links for manual review.</p>
+      <p><strong>Initial integration pass (<code>arena-d0b46ba5</code>, PR #1):</strong> checked the <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;hydrate=review,probablePitcher,decisions,linescore" target="_blank" rel="noopener">official MLB schedule for August 26, 2026</a> (15 games) and ran the upstream offline tests; noted that live upcoming-game alerts and all possible runtime values remain unverified.</p>
+      <p><strong>Companion verification page (<code>arena-55cc1142</code>, PRs #3–#5):</strong> independent blob-hash copy check and <code>2026-08-26</code> row verification are published on <a href="flagged-55cc1142.html">Flagged for Review — companion copy verification (<code>flagged-55cc1142.html</code>)</a> (<a href="audit/independent-copy-verification-2026-11-25.md">audit/independent-copy-verification-2026-11-25.md</a>). Its open integration requests (<code>V-02</code> / <code>V-F1</code>: link companion page from <code>flagged.html</code> and adapt <code>404.html</code> to <code>/Alert3/</code>) are fulfilled below.</p>
+      <p><strong>Independent line-by-line audit (<code>arena-0feca6f0</code>, 2026-11-25 — see <a href="#alert3-audit">§15 below</a>):</strong> independently verified <code>2026-08-26</code> games (<code>823096</code>, <code>823180</code>, <code>823506</code>, <code>824555</code>), <code>2026-08-28</code>, <code>2026-10-28</code>, offseason <code>2026-11-25</code>, upcoming <code>2027-02-19</code>–<code>2027-03-25</code> schedules, <code>gameStatus</code>, <code>eventTypes</code>, <code>teams</code>, and <code>people/660271/stats</code> against official <code>statsapi.mlb.com</code> responses; fixed Alert3's broken <code>404.html</code> base href, live-game <code>counterRegression</code> false alarms, <code>numOrNull</code> zero-fill edge case, and 8 broken upstream commit links. <strong>Still unverified:</strong> real-time behavior during an upcoming live MLB game (MLB is in the offseason on 2026-11-25; 0 live games scheduled today) and derived hit-forecast constants (not official MLB values).</p>
     </section>
     <h2>1. Upstream verification records</h2>
     <p style="color:var(--muted);font-size:13px">
@@ -864,8 +866,8 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
       (<a href="https://snapquast73-boop.github.io/LIVPBP2/reviews.html" target="_blank" rel="noopener">LIVPBP2</a> ·
       <a href="https://snapquast73-boop.github.io/POSTSSNALRT/reviews.html" target="_blank" rel="noopener">POSTSSNALRT</a>)
       and with the surviving original contract — the uploaded
-      <a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c814f4df9a2c57e766999ab7b1274a3c0/README.md" target="_blank" rel="noopener">README.md</a> and
-      <a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c814f4df9a2c57e766999ab7b1274a3c0/reviews.html" target="_blank" rel="noopener">reviews.html</a>
+      <a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c40143a7fff9d24853418002e008b79b1/README.md" target="_blank" rel="noopener">README.md</a> and
+      <a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c40143a7fff9d24853418002e008b79b1/reviews.html" target="_blank" rel="noopener">reviews.html</a>
       at the upload commit <code>aef1a74c</code>. Where the references disagree, the original text
       decides; nothing is inferred. Full record:
       <a href="audit/reference-parity-2026-11-22.md">audit/reference-parity-2026-11-22.md</a>.
@@ -896,7 +898,7 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
           <td class="wrap">Alert sound behavior differed between the references (RR-05 from the earlier audit).</td>
           <td class="wrap">The uploaded sound-button title names “a gentle raindrop chime for new challenges/reviews/boundary calls, official-scorer pending rulings and official scoring changes (not ABS), and the same chime whenever an active review could remove a run already on the scoreboard”. POSTSSNALRT plays a cash-register <em>cha-ching</em> for every tracked event including routine ABS, with a Sound Lab — none of that appears in the uploaded contract. LIVPBP2 matches the raindrop cue.</td>
           <td class="wrap">Raindrop chime kept and completed: pending rulings and scoring changes now chime too (they did not), and the runs-at-risk chime fires once per review the moment the condition first becomes visible. POSTSSNALRT's cha-ching/ABS alerts are <strong>documented, not copied</strong>. RR-05 is resolved in favor of the uploaded text.</td>
-          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c814f4df9a2c57e766999ab7b1274a3c0/reviews.html" target="_blank" rel="noopener">uploaded reviews.html L39</a> · <a href="https://github.com/snapquast73-boop/POSTSSNALRT/blob/3c110fca0c580277da3ed387b2c5ae11cf4b3da5/reviews.html#L38-L42" target="_blank" rel="noopener">POSTSSNALRT button title</a></td>
+          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c40143a7fff9d24853418002e008b79b1/reviews.html" target="_blank" rel="noopener">uploaded reviews.html L39</a> · <a href="https://github.com/snapquast73-boop/POSTSSNALRT/blob/3c110fca0c580277da3ed387b2c5ae11cf4b3da5/reviews.html#L38-L42" target="_blank" rel="noopener">POSTSSNALRT button title</a></td>
           <td class="status-flag">Resolved per original text</td>
         </tr>
         <tr>
@@ -920,7 +922,7 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
           <td class="wrap">Boundary-call classification was over-broad: charged manager challenges of boundary-type plays (<code>MH</code>/<code>MD</code>/<code>MO</code>/<code>MT</code>/<code>MS</code>) were chipped “Boundary call”, and catch/trap umpire reviews were included.</td>
           <td class="wrap">The official registry labels those codes “Manager challenge: …” (charged) — only <code>N*</code> codes are “Umpire review: …”. The README defines boundary-call reviews as “potential home runs / fair-foul at the wall” and “<code>NH</code> = boundary-call review”, and says boundary reviews are not charged to a team's counter. LIVPBP2 applies exactly this rule; POSTSSNALRT applies a third rule (boundary = <code>MS</code>/<code>NS</code> only).</td>
           <td class="wrap">Fixed: boundary calls are umpire-side home run / fair-foul / stadium-boundary reviews only; manager challenges stay Challenges rows (with their counter line). Catch/drop and trap umpire reviews render as Reviews. The three-way reference disagreement is recorded here — the original text governs.</td>
-          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/gameStatus" target="_blank" rel="noopener">gameStatus registry</a> · <a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c814f4df9a2c57e766999ab7b1274a3c0/README.md" target="_blank" rel="noopener">uploaded README</a></td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/gameStatus" target="_blank" rel="noopener">gameStatus registry</a> · <a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c40143a7fff9d24853418002e008b79b1/README.md" target="_blank" rel="noopener">uploaded README</a></td>
           <td class="status-ok">Fixed</td>
         </tr>
         <tr>
@@ -928,7 +930,7 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
           <td class="wrap">“score impact pending” (boundary review, no credited run) was missing; Before/Possible were silently omitted when the page opened after a ruling.</td>
           <td class="wrap">README: a boundary review with no currently credited run “says ‘score impact pending’ and does not invent an alternate score”; when the page opens only after resolution, Before/Possible are “honestly marked … as not observed”.</td>
           <td class="wrap">Both render now (“score impact pending”; “– (not observed)”). The dash wording is ours — the original marking wording is lost.</td>
-          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c814f4df9a2c57e766999ab7b1274a3c0/README.md" target="_blank" rel="noopener">uploaded README</a> · <a href="https://github.com/snapquast73-boop/LIVPBP2/blob/cbcdddece88023ca512a18b7a1165b77d2caa7a7/assets/js/reviews-feed.js#L522-L525" target="_blank" rel="noopener">LIVPBP2 tracker</a></td>
+          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c40143a7fff9d24853418002e008b79b1/README.md" target="_blank" rel="noopener">uploaded README</a> · <a href="https://github.com/snapquast73-boop/LIVPBP2/blob/cbcdddece88023ca512a18b7a1165b77d2caa7a7/assets/js/reviews-feed.js#L522-L525" target="_blank" rel="noopener">LIVPBP2 tracker</a></td>
           <td class="status-unverified">Wording unverified (marking contractual)</td>
         </tr>
         <tr>
@@ -960,7 +962,7 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
           <td class="wrap">ABS rows are excluded from the All tab.</td>
           <td class="wrap">Uploaded README: “<strong>All</strong> (every category except ABS pitch challenges…)”. LIVPBP2 agrees; POSTSSNALRT deliberately includes ABS (documented there as an intentional deviation).</td>
           <td class="wrap">Kept as-is (ABS has its own tab, tile and counters). POSTSSNALRT's inclusion is its own documented deviation from the uploaded README.</td>
-          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c814f4df9a2c57e766999ab7b1274a3c0/README.md" target="_blank" rel="noopener">uploaded README</a> · <a href="https://github.com/snapquast73-boop/POSTSSNALRT/blob/3c110fca0c580277da3ed387b2c5ae11cf4b3da5/docs/abs-inclusion.md" target="_blank" rel="noopener">POSTSSNALRT abs-inclusion.md</a></td>
+          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/blob/aef1a74c40143a7fff9d24853418002e008b79b1/README.md" target="_blank" rel="noopener">uploaded README</a> · <a href="https://github.com/snapquast73-boop/POSTSSNALRT/blob/3c110fca0c580277da3ed387b2c5ae11cf4b3da5/docs/abs-inclusion.md" target="_blank" rel="noopener">POSTSSNALRT abs-inclusion.md</a></td>
           <td class="status-flag">Flagged — reference discrepancy</td>
         </tr>
       </tbody>
@@ -974,6 +976,147 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
       (U-1…U-11, I-8, F-001…F-009, L-1…L-4, RR-01…RR-06, D-1…D-4, AF-1…AF-7) keep their status above;
       RR-05 is answered by R2-3.
     </p>
+
+    <h2 id="alert3-audit">15. Alert3 independent line-by-line audit &amp; copy verification (2026-11-25)</h2>
+    <p style="color:var(--muted);font-size:13px">
+      Independent line-by-line review of <code>kanlerxz87-cyber/Alert3</code> (session <code>arena-0feca6f0</code>)
+      against official <code>statsapi.mlb.com</code> endpoints, the GitHub API, and the live reference page
+      <a href="https://snapquast73-boop.github.io/LIVPBP/reviews.html?date=2026-08-26" target="_blank" rel="noopener">LIVPBP/reviews.html?date=2026-08-26</a>.
+      Every table row carries an official or first-party source link; values that cannot be confirmed from an
+      official live response on 2026-11-25 (MLB offseason) are left blank and marked <span class="status-unverified">Unverified</span>.
+    </p>
+
+    <h3>15a. Independent official MLB StatsAPI verification (2026-11-25)</h3>
+    <table class="verify">
+      <thead>
+        <tr><th>#</th><th>What was checked</th><th>Confirmed official value</th><th>Official source</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A3-V1</td>
+          <td class="wrap">Reference date <code>2026-08-26</code> slate: game count, final status, and games with <code>review.hasChallenges: true</code>.</td>
+          <td class="wrap">15 games (all Final <code>F</code>); 7 games with <code>review.hasChallenges: true</code> (<code>823180</code>, <code>823096</code>, <code>822692</code>, <code>823506</code>, <code>824555</code>, <code>823015</code>, <code>824963</code>). Matches rendered Alert3 &amp; LIVPBP replay feeds (10 non-ABS reviews = 8 manager challenges + 2 umpire reviews; 68 ABS challenges; 78 tracked entries).</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;hydrate=review&amp;fields=totalGames,dates,date,games,gamePk,gameDate,officialDate,status,abstractGameState,statusCode,detailedState,teams,away,home,team,id,name,score,review,hasChallenges,used,remaining" target="_blank" rel="noopener">statsapi.mlb.com schedule 2026-08-26</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>A3-V2</td>
+          <td class="wrap">Game <code>823096</code> (<code>PHI 6 @ SEA 0</code>, <code>2026-08-26</code>) Bot 5 manager challenge and official challenge counters.</td>
+          <td class="wrap"><code>atBatIndex: 36</code> <code>MF</code> (<code>challengeTeamId: 136</code>, <code>isOverturned: false</code>, score <code>6–0</code>); manager <code>away 0/1</code>, <code>home 1/0</code>; ABS <code>away 1/1/1</code>, <code>home 2/2/0</code>.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/game/823096/playByPlay" target="_blank" rel="noopener">playByPlay 823096</a> · <a href="https://statsapi.mlb.com/api/v1.1/game/823096/feed/live?fields=gameData,review,absChallenges,hasChallenges,away,home,used,remaining,usedSuccessful,usedFailed" target="_blank" rel="noopener">feed/live counters 823096</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>A3-V3</td>
+          <td class="wrap">Game <code>823180</code> (<code>CIN 10 @ SF 9</code>, <code>2026-08-26</code>) Top 7 runs-at-risk challenge, Top 9 umpire review, and official counters.</td>
+          <td class="wrap"><code>atBatIndex: 57</code> <code>MA</code> (<code>challengeTeamId: 137</code>, <code>isOverturned: false</code>, <code>3–6</code>, 1 scoring runner at <code>playIndex: 12</code>); <code>atBatIndex: 84</code> <code>NF</code> (<code>isOverturned: false</code>, <code>10–9</code>); manager <code>away 0/1</code>, <code>home 1/0</code>; ABS <code>away 4/0/2</code>, <code>home 2/1/1</code>.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/game/823180/playByPlay" target="_blank" rel="noopener">playByPlay 823180</a> · <a href="https://statsapi.mlb.com/api/v1.1/game/823180/feed/live?fields=gameData,review,absChallenges,hasChallenges,away,home,used,remaining,usedSuccessful,usedFailed" target="_blank" rel="noopener">feed/live counters 823180</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>A3-V4</td>
+          <td class="wrap">Game <code>823506</code> (<code>HOU 3 @ NYY 9</code>, <code>2026-08-26</code>) Bot 2 boundary-call pitch review and Game <code>824555</code> (<code>TEX 4 @ CWS 10</code>) Top 1 overturned pickoff challenge.</td>
+          <td class="wrap"><code>823506</code> <code>atBatIndex: 19</code> <code>playEvents[5]</code> <code>NH</code> (<code>Foul</code>, <code>isOverturned: false</code>, <code>1–2</code>); <code>824555</code> <code>atBatIndex: 2</code> <code>playEvents[7]</code> <code>MA</code> (<code>pickoff_1b</code>, <code>challengeTeamId: 145</code>, <code>isOverturned: true</code>, <code>0–0</code>).</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/game/823506/playByPlay" target="_blank" rel="noopener">playByPlay 823506</a> · <a href="https://statsapi.mlb.com/api/v1/game/824555/playByPlay" target="_blank" rel="noopener">playByPlay 824555</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>A3-V5</td>
+          <td class="wrap">Official <code>gameStatus</code> review codes, <code>eventTypes</code> pending codes, 30-club abbreviations (<code>season=2026</code>), and hitter stats (<code>people/660271/stats</code>).</td>
+          <td class="wrap">All <code>MA…MV</code>, <code>NA…NW</code>, <code>IH</code> labels match <code>FALLBACK_REASONS</code>; <code>MX</code>/<code>NX</code> omit <code>reason</code>; all 30 <code>UI.TEAM_ABBR</code> codes match; <code>os_ruling_pending_primary</code>/<code>_prior</code> confirmed; <code>season</code>/<code>lastXGames</code>/<code>vsPlayer</code>/<code>statSplits</code> shapes confirmed.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/gameStatus" target="_blank" rel="noopener">gameStatus</a> · <a href="https://statsapi.mlb.com/api/v1/eventTypes" target="_blank" rel="noopener">eventTypes</a> · <a href="https://statsapi.mlb.com/api/v1/teams?sportId=1&amp;fields=teams,id,name,abbreviation,teamName&amp;season=2026" target="_blank" rel="noopener">teams 2026</a> · <a href="https://statsapi.mlb.com/api/v1/people/660271/stats?stats=season,lastXGames,vsPlayer,statSplits&amp;group=hitting&amp;season=2026&amp;limit=15&amp;sitCodes=vl,vr,h,a" target="_blank" rel="noopener">people/660271/stats</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+        <tr>
+          <td>A3-V6</td>
+          <td class="wrap">Offseason slate (<code>2026-11-25</code>), last 2026 game (<code>2026-10-28</code>), historical fixture date (<code>2026-08-28</code>), and upcoming 2027 game days (<code>2027-02-19</code> Spring Training, <code>2027-03-25</code> Opening Day).</td>
+          <td class="wrap"><code>2026-11-25</code>: <code>0</code> games; <code>2026-10-28</code>: <code>1</code> game (<code>849799</code> MIL 4 @ TB 1); <code>2026-08-28</code>: <code>15</code> games; <code>2027-02-19</code>: <code>17</code> games; <code>2027-03-25</code>: <code>14</code> Scheduled (<code>Preview</code>) games with <code>review: {away:{}, home:{}}</code>.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-11-25&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">schedule 2026-11-25</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-10-28&amp;fields=totalGames,dates,date,games,gamePk,seriesDescription,teams,away,home,team,name,score" target="_blank" rel="noopener">schedule 2026-10-28</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;startDate=2027-02-15&amp;endDate=2027-04-05&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">schedule 2027-02-15..04-05</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2027-03-25&amp;hydrate=probablePitcher,linescore,decisions,review" target="_blank" rel="noopener">schedule 2027-03-25</a></td>
+          <td class="status-ok">Verified</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>15b. Alert3 copy defects, fixes &amp; flagged irregularities (2026-11-25)</h3>
+    <table class="verify">
+      <thead>
+        <tr><th>#</th><th>Finding</th><th>Confirmed official value</th><th>Resolution / Note</th><th>Source</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A3-F1</td>
+          <td class="wrap"><code>404.html</code> retained <code>location.pathname.indexOf('/LIVPBP/')</code> after copy, causing <code>&lt;base href="/"&gt;</code> on Alert3 Pages (breaking <code>assets/css/style.css</code> and linking “← Back to scoreboard” to <code>/index.html</code> 404).</td>
+          <td class="wrap">Alert3 GitHub Pages serves from <code>https://kanlerxz87-cyber.github.io/Alert3/</code> (<code>/Alert3/</code> prefix).</td>
+          <td class="wrap"><strong>Fixed:</strong> updated <code>404.html</code> base-href check to <code>/Alert3/</code> and added jsdom regression checks in <code>tests/jsdom-render-test.mjs</code>.</td>
+          <td class="wrap"><a href="https://api.github.com/repos/kanlerxz87-cyber/Alert3/pages" target="_blank" rel="noopener">Alert3 Pages API</a> · <a href="https://kanlerxz87-cyber.github.io/Alert3/404.html" target="_blank" rel="noopener">Alert3 404.html</a></td>
+          <td class="status-ok">Fixed &amp; tested</td>
+        </tr>
+        <tr>
+          <td>A3-F2</td>
+          <td class="wrap"><code>Reviews.counterRegression</code> flagged <code>n.remaining &lt; p.remaining</code> as a backwards counter — on upcoming live games, every normal failed manager (<code>1 → 0</code>) or ABS (<code>2 → 1</code>) challenge would emit a false-positive game-level irregularity row, contradicting <code>reviews.html</code> footer &amp; <code>README.md</code> (“a used-counter that moves backwards”).</td>
+          <td class="wrap"><code>823096</code> <code>review.home: {used: 1, remaining: 0}</code> and <code>823180</code> <code>absChallenges.home: {usedSuccessful: 2, usedFailed: 1, remaining: 1}</code> confirm <code>remaining</code> drops on failed challenges.</td>
+          <td class="wrap"><strong>Fixed:</strong> restricted <code>counterRegression</code> to monotonic used-counters (<code>used</code>, <code>usedSuccessful</code>, <code>usedFailed</code>); added unit &amp; live-transition regression tests in <code>tools/smoke-test.mjs</code> §[1] and §[14].</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1.1/game/823096/feed/live?fields=gameData,review,absChallenges,hasChallenges,away,home,used,remaining,usedSuccessful,usedFailed" target="_blank" rel="noopener">feed/live 823096</a> · <a href="https://statsapi.mlb.com/api/v1.1/game/823180/feed/live?fields=gameData,review,absChallenges,hasChallenges,away,home,used,remaining,usedSuccessful,usedFailed" target="_blank" rel="noopener">feed/live 823180</a></td>
+          <td class="status-ok">Fixed &amp; tested</td>
+        </tr>
+        <tr>
+          <td>A3-F3</td>
+          <td class="wrap"><code>Reviews.numOrNull</code> called <code>Number(v)</code> directly, converting <code>null</code> or <code>""</code> into <code>0</code> instead of preserving absence.</td>
+          <td class="wrap">Upcoming <code>2027-03-25</code> schedule returns empty <code>review: {away: {}, home: {}}</code> objects pre-game.</td>
+          <td class="wrap"><strong>Fixed:</strong> <code>numOrNull</code> now returns <code>null</code> for <code>null</code>, <code>undefined</code>, <code>""</code>, and booleans; regression-tested in <code>tools/smoke-test.mjs</code> §[1].</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2027-03-25&amp;hydrate=probablePitcher,linescore,decisions,review" target="_blank" rel="noopener">schedule 2027-03-25</a></td>
+          <td class="status-ok">Fixed &amp; tested</td>
+        </tr>
+        <tr>
+          <td>A3-F4</td>
+          <td class="wrap">8 broken upstream commit links used nonexistent SHA <code>aef1a74c814f4df9a2c57e766999ab7b1274a3c0</code> (GitHub HTTP 422/404), and 18 Markdown table rows in <code>audit/reference-parity-2026-11-22.md</code> lacked clickable <code>https://</code> source links.</td>
+          <td class="wrap">Verified real upload commit SHA is <code>aef1a74c40143a7fff9d24853418002e008b79b1</code>.</td>
+          <td class="wrap"><strong>Fixed:</strong> repaired all 8 broken commit links on <code>flagged.html</code> &amp; <code>audit/reference-parity-2026-11-22.md</code> and added <code>https://</code> source links to every Markdown table row.</td>
+          <td class="wrap"><a href="https://github.com/snapquast73-boop/LIVPBP/commit/aef1a74c40143a7fff9d24853418002e008b79b1" target="_blank" rel="noopener">LIVPBP commit aef1a74c4014</a></td>
+          <td class="status-ok">Fixed</td>
+        </tr>
+        <tr>
+          <td>A3-F5</td>
+          <td class="wrap">Doc vs code discrepancy: <code>README.md</code> states crew-chief/umpire/boundary rows show no counter line by design, while <code>reviews-feed.js:642</code> falls back to printing the both-teams <code>Challenges left: …</code> summary on those rows (matching upstream <code>LIVPBP</code> on <code>2026-08-26</code> rows <code>823180:84:p:NF</code> and <code>823506:19:5:NH</code>).</td>
+          <td class="wrap"><code>823180</code> counters: CIN <code>1 MGR · 2 ABS</code> — SF <code>0 MGR · 1 ABS</code> (rendered on both LIVPBP &amp; Alert3).</td>
+          <td class="wrap"><strong>Kept for <code>LIVPBP</code> visual parity; flagged for owner review.</strong></td>
+          <td class="wrap"><a href="https://snapquast73-boop.github.io/LIVPBP/reviews.html?date=2026-08-26" target="_blank" rel="noopener">LIVPBP 2026-08-26</a> · <a href="https://statsapi.mlb.com/api/v1.1/game/823180/feed/live?fields=gameData,review,absChallenges,hasChallenges,away,home,used,remaining,usedSuccessful,usedFailed" target="_blank" rel="noopener">feed/live 823180</a></td>
+          <td class="status-flag">Flagged</td>
+        </tr>
+        <tr>
+          <td>A3-F6</td>
+          <td class="wrap">Doc vs code discrepancy in upstream <code>AF-4</code>: <code>flagged.html</code> §13 and <code>docs/verification-report.md</code> say “45-day <code>scheduleRange</code> jump button”, whereas <code>reviews-feed.js:455</code> and <code>scoreboard.js:209</code> scan 180 days back (<code>shiftISODate(reqDate, -180)</code>).</td>
+          <td class="wrap">Last 2026 game <code>2026-10-28</code> (<code>849799</code>) is 28 days before <code>2026-11-25</code> and 114 days before <code>2027-02-19</code> Spring Training.</td>
+          <td class="wrap"><strong>Kept 180-day scan</strong> (required across winter offseason); documentation discrepancy flagged for review.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-10-28&amp;fields=totalGames,dates,date,games,gamePk,seriesDescription" target="_blank" rel="noopener">schedule 2026-10-28</a></td>
+          <td class="status-flag">Flagged</td>
+        </tr>
+        <tr>
+          <td>A3-F7</td>
+          <td class="wrap">Idle-slate polling cadence: <code>reviews-feed.js</code> schedules <code>scan()</code> every 250 ms even on offseason or future <code>Preview</code>-only dates with 0 live games (<code>scoreboard.js</code> polls every 500 ms).</td>
+          <td class="wrap"><code>2026-11-25</code>: 0 live games; <code>2027-03-25</code>: 14 <code>Preview</code> games, 0 live.</td>
+          <td class="wrap"><strong>Kept for <code>LIVPBP</code> parity; flagged for owner review</strong> (consider slowing idle-slate interval in a future iteration).</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-11-25&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">schedule 2026-11-25</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2027-03-25&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">schedule 2027-03-25</a></td>
+          <td class="status-flag">Flagged</td>
+        </tr>
+        <tr>
+          <td>A3-F8</td>
+          <td class="wrap">Live upcoming-game execution (<code>Preview → Live → Final</code>, real-time <code>inProgress: true</code> before-review score capture, sound chimes, browser notifications during an active 2027 MLB game).</td>
+          <td class="wrap"></td>
+          <td class="wrap"><strong>Unverified in live production:</strong> MLB is in the offseason on 2026-11-25 (0 live games scheduled today). Synthetic <code>Preview → Live</code> transition tested offline in <code>tools/smoke-test.mjs</code> §[14]; confirmed live-game outcome left blank until games resume (Spring Training <code>2027-02-19</code>, Opening Day <code>2027-03-25</code>).</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-11-25&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">schedule 2026-11-25</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;startDate=2027-02-15&amp;endDate=2027-04-05&amp;fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">schedule 2027-02-15..04-05</a></td>
+          <td class="status-unverified">Unverified (offseason)</td>
+        </tr>
+        <tr>
+          <td>A3-F9</td>
+          <td class="wrap">Workflow branch naming: Arena assigns fixed per-session branches (<code>arena/d0b46ba5-alert3</code>, <code>arena/0feca6f0-alert3</code>) and disallows creating/renaming <code>session-&lt;id&gt;/&lt;task&gt;</code> branches.</td>
+          <td class="wrap">Alert3 repository default branch is <code>main</code>; integration occurs via Pull Requests from platform-assigned session branches.</td>
+          <td class="wrap"><strong>Process deviation logged</strong> in <code>COORDINATION.md</code> (consistent with upstream <code>F-001</code>).</td>
+          <td class="wrap"><a href="https://github.com/kanlerxz87-cyber/Alert3" target="_blank" rel="noopener">github.com/kanlerxz87-cyber/Alert3</a></td>
+          <td class="status-flag">Flagged (process)</td>
+        </tr>
+      </tbody>
+    </table>
 
   </main>
 
