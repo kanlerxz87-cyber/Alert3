@@ -20,7 +20,7 @@ Claimed 2026-11-25 UTC. This session uses the Arena-assigned branch rather than 
 ## Task V-01 — independent copy & official-source verification (session `arena-55cc1142`)
 
 - **Claimed:** 2026-11-25 20:41 UTC. Session ID `arena-55cc1142-alert3`, Arena-fixed branch `arena/55cc1142-alert3` (the brief's `session-<id>/<task>` branch naming is impossible here — same platform deviation already logged by other sessions).
-- **Status:** in progress.
+- **Status:** done (2026-11-25 UTC); see the verification and completion log below.
 - **Non-overlap:** the import/integration task `I-01` above is owned by `arena-d0b46ba5` and covers all repository files. This task does **not** claim that work. It only creates these new, previously absent files:
   - `audit/independent-copy-verification-2026-11-25.md`
   - `flagged-55cc1142.html`
@@ -30,8 +30,20 @@ Claimed 2026-11-25 UTC. This session uses the Arena-assigned branch rather than 
 
 | Task | Status | Session | File scope |
 | --- | --- | --- | --- |
-| V-01a Verify imported files vs upstream commit `5c02527` | in progress | `arena-55cc1142` | `audit/independent-copy-verification-2026-11-25.md` |
-| V-01b Verify replay rows & API fields against official StatsAPI | in progress | `arena-55cc1142` | `audit/independent-copy-verification-2026-11-25.md` |
-| V-01c Publish flagged/unverified items with source links | in progress | `arena-55cc1142` | `flagged-55cc1142.html` |
+| V-01a Verify imported files vs upstream commit `5c02527` | done | `arena-55cc1142` | `audit/independent-copy-verification-2026-11-25.md` |
+| V-01b Verify replay rows & API fields against official StatsAPI | done | `arena-55cc1142` | `audit/independent-copy-verification-2026-11-25.md` |
+| V-01c Publish flagged/unverified items with source links | done | `arena-55cc1142` | `flagged-55cc1142.html` |
 | V-02 Link the new flagged page from the site navigation | needs review (blocked: `flagged.html` owned by `I-01`) | `arena-d0b46ba5` (requested) | `flagged.html` |
 
+
+### Completion log — V-01 (`arena-55cc1142`)
+
+- **Sources used (all read this session):**
+  - Upstream copy source: [commit 5c02527](https://api.github.com/repos/snapquast73-boop/LIVPBP/commits/5c02527d3c7a56ea66c698cfabff80a407b6dfd3) and [tree API](https://api.github.com/repos/snapquast73-boop/LIVPBP/git/trees/5c02527d3c7a56ea66c698cfabff80a407b6dfd3).
+  - Reference page: [reviews.html?date=2026-08-26](https://snapquast73-boop.github.io/LIVPBP/reviews.html?date=2026-08-26).
+  - Official MLB: [schedule](https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-08-26), [playByPlay 823096](https://statsapi.mlb.com/api/v1/game/823096/playByPlay), [playByPlay 823180](https://statsapi.mlb.com/api/v1/game/823180/playByPlay), [feed/live 823096](https://statsapi.mlb.com/api/v1.1/game/823096/feed/live), [feed/live 823180](https://statsapi.mlb.com/api/v1.1/game/823180/feed/live), [gameStatus registry](https://statsapi.mlb.com/api/v1/gameStatus), [teams](https://statsapi.mlb.com/api/v1/teams?sportId=1).
+  - Deployment: [Alert3 Pages API](https://api.github.com/repos/kanlerxz87-cyber/Alert3/pages).
+- **Verification performed:** byte-for-byte Git blob comparison of all 40 imported paths against the upstream commit (39 identical; `COORDINATION.md` intentionally differs); all three reference replay rows checked field-by-field against the official responses, including codes `MF`/`MA`/`NF`, challenge team ids, scores, batter/pitcher and both teams' counters; local suite re-run from a scratch export (`restoration-check` ALL PASSED, `npm test` 64/64, `run-all.mjs` ALL PASSED incl. 47 jsdom checks, `props-provenance-test` 5/5). Full per-row table: `audit/independent-copy-verification-2026-11-25.md`.
+- **Irregularities published:** `flagged-55cc1142.html` §2, IDs V-F1…V-F9. Highlights: the imported `404.html` still hard-codes `/LIVPBP/` although this site is served from `/Alert3/`; README demo link and some test/doc links point at the upstream site; the README's stable tag does not exist here; historical upstream verification claims were copied rather than re-verified; before-review scores, client scan-time/tracked-entry metrics and future-game alert behaviour have no official source and are left blank.
+- **Integration request (V-02, needs review, not blocking):** link `flagged-55cc1142.html` from `flagged.html` or copy its rows there, and adapt `404.html` to the `/Alert3/` base path. Those files are owned by the integration session; this session did not edit them.
+- **Parallel-session note:** other sessions (`arena-0feca6f0`, `arena-a15c4b2a`, `arena-c6b0c0af`, `arena-d0b46ba5`) were observed active. This branch claims only the two new files plus append-only board edits; nothing they own was changed. The integration PR/deploy record remains with the integration owner.
