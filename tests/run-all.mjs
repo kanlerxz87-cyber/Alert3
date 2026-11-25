@@ -23,6 +23,7 @@ function run(label, cmd, args) {
 const results = [];
 results.push(run('syntax: assets/js/*.js', 'bash', ['-lc', 'set -e; for f in assets/js/*.js server.mjs tools/*.mjs; do node --check "$f"; done; echo "all scripts parse"']));
 results.push(run('link-check', process.execPath, [path.join(HERE, 'link-check.mjs')]));
+results.push(run('provenance-check', process.execPath, [path.join(HERE, 'provenance-check.mjs')]));
 results.push(run('contract-check', process.execPath, [path.join(HERE, 'contract-check.mjs')]));
 results.push(run('jsdom-render-test', process.execPath, [path.join(HERE, 'jsdom-render-test.mjs')]));
 
