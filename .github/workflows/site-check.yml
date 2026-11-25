@@ -1,6 +1,7 @@
 name: Site checks
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
 permissions:
@@ -25,3 +26,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+  official-sources:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/verify-official-sources.mjs
