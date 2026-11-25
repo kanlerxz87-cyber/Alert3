@@ -1,3 +1,5 @@
+> **Copy provenance:** This repository imports [LIVPBP at 5c02527](https://github.com/snapquast73-boop/LIVPBP/tree/5c02527d3c7a56ea66c698cfabff80a407b6dfd3), under its included MIT license. Historical verification statements below are the upstream project's records, not independently reverified in full for this copy. See [Flagged for Review](flagged.html) for limitations.
+
 # ⚾ MLB Live PBP — Live MLB Scoreboard & Play-by-Play
 
 > ### ♻️ **RESTORATION NOTE (2026-11-20)** ♻️

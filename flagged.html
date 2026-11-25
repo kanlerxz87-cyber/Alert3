@@ -41,7 +41,12 @@
       </p>
     </div>
 
-    <h2>1. Verified against official sources</h2>
+    <section aria-label="Copy verification limitations">
+      <h2>Copy verification limitations (2026-11-25)</h2>
+      <p>This site copies <a href="https://github.com/snapquast73-boop/LIVPBP/tree/5c02527d3c7a56ea66c698cfabff80a407b6dfd3">the upstream repository</a>. The historical verification entries below are upstream's records, not an independent line-by-line verification by this copy's integration session. Their claims and source links remain available for review.</p>
+      <p><strong>Unverified:</strong> behavior during an upcoming live game, including alerts, and every displayed value across all possible games. The integration session checked the <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&amp;date=2026-08-26&amp;hydrate=review,probablePitcher,decisions,linescore">official MLB schedule for August 26, 2026</a> and ran the upstream offline tests; those checks cannot establish live-game correctness. Derived forecasts and review interpretations are not official MLB values. See the specific upstream flags below.</p>
+    </section>
+    <h2>1. Upstream verification records</h2>
     <p style="color:var(--muted);font-size:13px">
       Every row was fetched on 2026-11-20 from <code>statsapi.mlb.com</code> (the public data service
       the README documents) or from mlb.com itself. Links open the exact request used.
