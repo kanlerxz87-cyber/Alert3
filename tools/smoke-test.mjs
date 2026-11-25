@@ -458,12 +458,27 @@ console.log('\n[1] reviews.js — review parsing against verified payload shapes
     assert(edited.changes.length === 0 && edited.edits.length === 1, 'description/score edit must be flagged, not classified as a change');
   });
 
-  await check('counter regression is detected, never zero-filled', async () => {
+  await check('counter regression flags backwards used-counters and never flags normal failed challenges', async () => {
     const up = w.Reviews.counterRegression({ away: { used: 1, remaining: 0 } }, { away: { used: 1, remaining: 1 } });
     assert(up === null, 'a used-counter that holds steady must not be flagged: ' + JSON.stringify(up));
+    const normalMgrFail = w.Reviews.counterRegression(
+      { manager: { away: { used: 0, remaining: 1 } }, abs: { away: { usedSuccessful: 0, usedFailed: 0, remaining: 2 } } },
+      { manager: { away: { used: 1, remaining: 0 } }, abs: { away: { usedSuccessful: 0, usedFailed: 1, remaining: 1 } } }
+    );
+    assert(normalMgrFail === null, 'normal failed challenges decreasing remaining must not be flagged: ' + JSON.stringify(normalMgrFail));
     const notes = w.Reviews.counterRegression({ away: { used: 1, remaining: 1 } }, { away: { used: 0, remaining: 0 } });
-    assert(Array.isArray(notes) && notes.length === 2, 'expected 2 regression notes (used + remaining), got ' + JSON.stringify(notes));
+    assert(Array.isArray(notes) && notes.length === 1 && /away\.used moved backwards/.test(notes[0]),
+      'expected 1 used-counter regression note, got ' + JSON.stringify(notes));
     assert(w.Reviews.counterRegression(null, { away: { used: 1 } }) === null, 'missing previous reading must not be invented');
+  });
+
+  await check('null and empty counter fields stay null and are never zero-filled', async () => {
+    const m = w.Reviews.managerCounters({ away: { used: null, remaining: '' }, home: {} });
+    assert(m.away.used === null && m.away.remaining === null, 'manager null/empty must stay null: ' + JSON.stringify(m));
+    assert(m.home.used === null && m.home.remaining === null, 'manager missing must stay null: ' + JSON.stringify(m));
+    const a = w.Reviews.absCounters({ away: { usedSuccessful: null, usedFailed: '', remaining: undefined }, home: {} });
+    assert(a.away.usedSuccessful === null && a.away.usedFailed === null && a.away.remaining === null,
+      'ABS null/empty must stay null: ' + JSON.stringify(a));
   });
 
   dom.window.close();
@@ -1227,6 +1242,96 @@ console.log('\n[13] reference-parity fixes (session 6e2a58d9: G-2…G-5, G-9)');
   });
 
   dom.window.close();
+}
+
+console.log('\n[14] Alert3 regression checks — upcoming scheduled game days & live counter updates');
+{
+  await check('upcoming scheduled Preview game transitions cleanly to Live without false counter alarms', async () => {
+    let phase = 'preview';
+    const previewGame = {
+      gamePk: 853719,
+      officialDate: '2027-03-25',
+      gameDate: '2027-03-25T17:10:00Z',
+      status: { abstractGameState: 'Preview', codedGameState: 'S', detailedState: 'Scheduled', statusCode: 'S' },
+      teams: {
+        away: { team: { id: 145, name: 'Chicago White Sox' }, score: null },
+        home: { team: { id: 116, name: 'Detroit Tigers' }, score: null },
+      },
+      review: { away: {}, home: {} },
+    };
+    const liveGame1 = {
+      ...previewGame,
+      status: { abstractGameState: 'Live', codedGameState: 'I', detailedState: 'In Progress', statusCode: 'I' },
+      teams: {
+        away: { team: { id: 145, name: 'Chicago White Sox' }, score: 1 },
+        home: { team: { id: 116, name: 'Detroit Tigers' }, score: 0 },
+      },
+      review: { hasChallenges: false, away: { used: 0, remaining: 1 }, home: { used: 0, remaining: 1 } },
+    };
+    const liveGame2 = {
+      ...liveGame1,
+      review: { hasChallenges: true, away: { used: 1, remaining: 0 }, home: { used: 0, remaining: 1 } },
+    };
+    const upcomingFetch = (url) => {
+      const s = String(url);
+      if (s.includes('/api/v1/gameStatus')) return routeFetch(url);
+      if (s.includes('/schedule?')) {
+        const g = phase === 'preview' ? previewGame : (phase === 'live1' ? liveGame1 : liveGame2);
+        return Promise.resolve({
+          ok: true, status: 200, headers: { get: () => null },
+          json: async () => ({ totalGames: 1, dates: [{ date: '2027-03-25', games: [g] }] }),
+        });
+      }
+      if (s.includes('/game/853719/playByPlay')) {
+        const plays = phase === 'live2' ? [
+          play(5, {
+            about: { atBatIndex: 5, halfInning: 'top', inning: 2, isComplete: true, hasReview: true },
+            result: { eventType: 'field_out', description: 'White Sox challenged (play at 1st), call on the field was upheld: batter grounds out.', awayScore: 1, homeScore: 0, isOut: true },
+            reviewDetails: { isOverturned: false, inProgress: false, reviewType: 'MF', challengeTeamId: 145 },
+          }),
+        ] : [];
+        return Promise.resolve({
+          ok: true, status: 200, headers: { get: () => null },
+          json: async () => ({ allPlays: plays }),
+        });
+      }
+      if (s.includes('/game/853719/feed/live')) {
+        const g = phase === 'live2' ? liveGame2 : liveGame1;
+        return Promise.resolve({
+          ok: true, status: 200, headers: { get: () => null },
+          json: async () => ({
+            gameData: {
+              review: g.review,
+              absChallenges: phase === 'live2'
+                ? { hasChallenges: true, away: { usedSuccessful: 0, usedFailed: 1, remaining: 1 }, home: { usedSuccessful: 0, usedFailed: 0, remaining: 2 } }
+                : { hasChallenges: false, away: { usedSuccessful: 0, usedFailed: 0, remaining: 2 }, home: { usedSuccessful: 0, usedFailed: 0, remaining: 2 } },
+            },
+          }),
+        });
+      }
+      return routeFetch(url);
+    };
+    const upDom = await boot('reviews.html?date=2027-03-25', {
+      fetchImpl: upcomingFetch,
+      beforeParse(x) { x.localStorage.clear(); },
+    });
+    await new Promise((r) => setTimeout(r, 450));
+    const stUp = upDom.window.ReplayFeed.state;
+    assert(stUp.games.length === 1 && stUp.entries.length === 0, 'Preview slate should show 1 game and 0 entries');
+    phase = 'live1';
+    while (stUp.scanning) await new Promise((r) => setTimeout(r, 40));
+    await upDom.window.ReplayFeed.scan();
+    await new Promise((r) => setTimeout(r, 150));
+    phase = 'live2';
+    while (stUp.scanning) await new Promise((r) => setTimeout(r, 40));
+    await upDom.window.ReplayFeed.scan();
+    await new Promise((r) => setTimeout(r, 150));
+    assert(stUp.entries.some((e) => e.gamePk === 853719 && e.review && e.review.code === 'MF'),
+      'Live transition must pick up the new manager challenge');
+    const regNotes = (stUp.irregularities[853719] || []).filter((n) => /moved backwards/.test(n));
+    assert(regNotes.length === 0, 'normal failed manager/ABS challenge must not emit counter regression irregularity: ' + JSON.stringify(regNotes));
+    upDom.window.close();
+  });
 }
 
 function __setDate(dom) {
