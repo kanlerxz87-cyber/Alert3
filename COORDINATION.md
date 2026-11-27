@@ -13,6 +13,35 @@ Reference upstream: [`snapquast73-boop/LIVPBP`](https://github.com/snapquast73-b
 - `2026-11-25T20:46Z` — First merge with `origin/main` (`e471544`, [PR #1](https://github.com/kanlerxz87-cyber/Alert3/pull/1) from sibling session `arena-d0b46ba5`). Resolved the `add/add` conflict in `COORDINATION.md` by retaining the complete `arena-d0b46ba5` task record and integration log below alongside `arena-0feca6f0`'s line-by-line audit and remediation board. Zero sibling files or commits were discarded.
 - `2026-11-25T20:54Z` — Second merge with `origin/main` (`b3f2035`, [PR #2](https://github.com/kanlerxz87-cyber/Alert3/pull/2) from `arena-d0b46ba5` and [PRs #3–#5](https://github.com/kanlerxz87-cyber/Alert3/pull/5) from `arena-55cc1142`). Resolved the `COORDINATION.md` conflict by retaining all preserved records from `arena-d0b46ba5` and `arena-55cc1142` verbatim, keeping `flagged-55cc1142.html` and `audit/independent-copy-verification-2026-11-25.md` untouched, and fulfilling `arena-55cc1142`'s open `V-02` / `V-F1` integration requests (linking `flagged-55cc1142.html` from `flagged.html` and adapting `404.html` to `/Alert3/`). Zero sibling files or commits were discarded.
 
+## Session `arena-80d92e25` — latency, alert sound, live state, official-scoring log (`2026-11-27`)
+
+- Branch (fixed by Arena): **`arena/80d92e25-alert3`**, branched from `main` @ `8afbecc`.
+- Scope: the four work items in the brief. No sibling session's file was rewritten; the changes are
+  additive to `reviews.html`, `assets/css/style.css`, `assets/js/api.js`, `assets/js/reviews-feed.js`
+  and `server.mjs`, plus four new files.
+
+| Task | What shipped | Files | Official source |
+| --- | --- | --- | --- |
+| `L-01` Latency | Three poll lanes (status 125 ms / state 500 ms / play 1000 ms), a lean schedule projection in the loop, out-of-band fetches on a status flip or state change, measured data age + status-sweep reaction, adaptive 429 throttle, timecode/diffPatch API helpers | [`assets/js/reviews-feed.js`](https://github.com/kanlerxz87-cyber/Alert3/blob/main/assets/js/reviews-feed.js) · [`assets/js/api.js`](https://github.com/kanlerxz87-cyber/Alert3/blob/main/assets/js/api.js) | [lean slate status](https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-08-28&fields=dates,games,gamePk,status,statusCode,detailedState) · [diffPatch](https://statsapi.mlb.com/api/v1.1/game/531321/feed/live/diffPatch?startTimecode=20180823_193704&endTimecode=20180823_193711) |
+| `A-01` Alert sound | Shared three-second raindrop cue, Test button (bypasses toggle + cooldown), volume slider, persisted preferences, one cue per event burst | [`assets/js/alert-audio.js`](https://github.com/kanlerxz87-cyber/Alert3/blob/main/assets/js/alert-audio.js) | [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) |
+| `S-01` Live state | `GameState.capture()` / `diffSnapshots()` / `stateLine()` / `latencyMs()`, refresh-proof journal (7 dates, 120 snapshots/game, append-on-change), live-state monitor for every game + a 🕒 Live State feed tab, observation-gap flagging | [`assets/js/game-state.js`](https://github.com/kanlerxz87-cyber/Alert3/blob/main/assets/js/game-state.js) | [`feed/live`](https://statsapi.mlb.com/api/v1.1/game/824638/feed/live) · [`metaData`](https://statsapi.mlb.com/api/v1.1/game/764333/feed/live?fields=metaData,timeStamp,wait,logicWait) |
+| `O-01` Official scoring | Append-only pending-ruling / scoring-change log, its own section and store (30 dates, 500 events), refresh restore, JSON/CSV export, `POST/GET /api/scoring-log`, hard isolation from the alert path (try/catch + regression test) | [`assets/js/official-scoring-log.js`](https://github.com/kanlerxz87-cyber/Alert3/blob/main/assets/js/official-scoring-log.js) · [`server.mjs`](https://github.com/kanlerxz87-cyber/Alert3/blob/main/server.mjs) | [`eventTypes`](https://statsapi.mlb.com/api/v1/eventTypes) · [mlb.com scoring changes](https://www.mlb.com/official-information/scoring-changes) |
+
+Checks added: `tools/smoke-test.mjs` §[15] (23 checks — capture, diffs, wording, latency arithmetic,
+timecode conversion, journal, audio graph inspected with a stubbed `AudioContext`, pending → decided →
+reclassified flow, refresh restore, export, lane cadences, lean projection, alert isolation, Test
+button, volume persistence), `tests/jsdom-render-test.mjs` (+6 element checks),
+`tools/restoration-check.mjs` (scoring-log endpoints, append-only merge, new scripts served).
+
+Results: `smoke-test` **89/89** · `jsdom-render-test` **56/56** · `run-all` **all PASS** ·
+`restoration-check` **ALL CHECKS PASSED** · `props-provenance-test` **5/5**.
+
+Unverified (offseason, no live game on 2026-11-27) and published on
+[`flagged.html` §17](https://kanlerxz87-cyber.github.io/Alert3/flagged.html#latency-2026-11-27):
+observed live detection times, rate-limit headroom, the diffPatch transport (implemented, not enabled),
+the Gameday push socket (not implemented), perceptual sound quality, and live pending-ruling capture.
+Full report: [`docs/latency-state-alerts-2026-11-27.md`](docs/latency-state-alerts-2026-11-27.md).
+
 ## Task Board (`arena-0feca6f0`)
 
 | Task ID | Description | Status | Owning Session | Files / Scope | Official Source |

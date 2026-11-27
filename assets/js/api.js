@@ -18,11 +18,14 @@
   var API_ROOT = 'https://statsapi.mlb.com/api';
   var REQUEST_TIMEOUT_MS = 15000;
 
-  /* HTTP 429 quiet period: honour Retry-After when the host sends one, else 60s.
-   * Clamped to 1s-5min so a bogus header can neither spin nor stall the page. */
-  var QUIET_DEFAULT_MS = 60000;
+  /* HTTP 429 quiet period: honour Retry-After when the host sends one, else 15s.
+   * Clamped to 1s-2min so a bogus header can neither spin nor stall the page.
+   * (The alert feed runs three lanes; a minute-long blackout after a single
+   * rate-limit reply would cost alerts, so the default is kept short and the
+   * feed additionally backs its own lanes off — see reviews-feed.js.) */
+  var QUIET_DEFAULT_MS = 15000;
   var QUIET_MIN_MS = 1000;
-  var QUIET_MAX_MS = 300000;
+  var QUIET_MAX_MS = 120000;
 
   var state = {
     quietUntil: 0,
@@ -248,6 +251,58 @@
       });
   }
 
+  /* MLB's feed timecode is `MMDDYYYY_HHMMSS` in UTC (the format the StatsAPI's
+   * own swagger documents for `startTimecode`/`endTimecode`). Both directions
+   * are here so a `metaData.timeStamp` can drive the incremental endpoints. */
+  function tsToTimecode(ts) {
+    var str = String(ts || '').trim();
+    if (/^\d{8}_\d{6}$/.test(str)) return str;
+    if (str === '') return '';
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return p(d.getUTCMonth() + 1) + p(d.getUTCDate()) + d.getUTCFullYear() + '_' +
+      p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds());
+  }
+
+  function timecodeToMs(timecode) {
+    var str = String(timecode || '').trim();
+    var m = /^(\d{2})(\d{2})(\d{4})_(\d{2})(\d{2})(\d{2})$/.exec(str);
+    if (!m) return null;
+    var ms = Date.UTC(Number(m[3]), Number(m[1]) - 1, Number(m[2]),
+      Number(m[4]), Number(m[5]), Number(m[6]));
+    return isFinite(ms) ? ms : null;
+  }
+
+  /**
+   * Incremental feed: everything that changed since `sinceTimecode`.
+   * Returns either a diff patch (array of {op, path, value}) or a whole
+   * feed/live object — MLB does both, so the caller must handle both.
+   * `pushUpdateId` is optional; it comes from the Gameday push socket and is
+   * only meaningful there.
+   */
+  function gameFeedPatch(gamePk, sinceTimecode, opts) {
+    opts = opts || {};
+    var start = tsToTimecode(sinceTimecode);
+    if (!start) return Promise.reject(ApiError('a timecode is required for a diff patch', 0, ''));
+    var url = API_ROOT + '/v1.1/game/' + gamePk + '/feed/live/diffPatch?startTimecode=' + encodeURIComponent(start);
+    if (opts.endTimecode) url += '&endTimecode=' + encodeURIComponent(tsToTimecode(opts.endTimecode));
+    if (opts.pushUpdateId) url += '&pushUpdateId=' + encodeURIComponent(opts.pushUpdateId);
+    return getJSON(url, { signal: opts.signal, retries: 0 });
+  }
+
+  /* Play-by-play since a timecode (same incremental idea, no patch semantics). */
+  function playByPlaySince(gamePk, sinceTimecode, opts) {
+    opts = opts || {};
+    var url = API_ROOT + '/v1/game/' + gamePk + '/playByPlay';
+    var query = [];
+    var start = tsToTimecode(sinceTimecode);
+    if (start) query.push('timecode=' + encodeURIComponent(start));
+    if (opts.fields) query.push('fields=' + encodeURIComponent(opts.fields));
+    if (query.length) url += '?' + query.join('&');
+    return getJSON(url, { signal: opts.signal, retries: opts.retries });
+  }
+
   /* Lean per-game status projection for the game page's 125ms watcher (~150 B). */
   function gameStatusLean(gamePk, opts) {
     opts = opts || {};
@@ -400,6 +455,11 @@
     scheduleRange: scheduleRange,
     slateStatus: slateStatus,
     gameFeed: gameFeed,
+    gameFeedPatch: gameFeedPatch,
+    playByPlaySince: playByPlaySince,
+    tsToTimecode: tsToTimecode,
+    timecodeToMs: timecodeToMs,
+    ApiError: ApiError,
     gameStatusLean: gameStatusLean,
     playByPlay: playByPlay,
     boxscore: boxscore,

@@ -244,6 +244,11 @@ console.log(`jsdom-render-test: ${LIVE ? 'LIVE official API' : 'fixtures'} mode`
   check('reviews: tabs rendered', doc.querySelectorAll('#feed-tabs button, #feed-tabs .tab-btn, #feed-tabs a').length > 0);
   check('reviews: summary stats rendered', textOf(doc.querySelector('#feed-stats')).length > 0);
   check('reviews: sound toggle present', !!doc.querySelector('#sound-toggle-btn'));
+  check('reviews: alert sound test button present', !!doc.querySelector('#sound-test-btn'));
+  check('reviews: alert volume control present', !!doc.querySelector('#volume-slider'));
+  check('reviews: latency pill present', !!doc.querySelector('#latency-pill'));
+  check('reviews: live-state monitor present', !!doc.querySelector('#state-monitor'));
+  check('reviews: separate official-scoring section present', !!doc.querySelector('#official-scoring'));
   check('reviews: notification toggle present', !!doc.querySelector('#notify-toggle-btn'));
   check('reviews: countdown element present', !!doc.querySelector('#countdown'));
   check('reviews: live indicator present', !!doc.querySelector('#live-dot'));
@@ -252,6 +257,11 @@ console.log(`jsdom-render-test: ${LIVE ? 'LIVE official API' : 'fixtures'} mode`
   }
   await new Promise((r) => setTimeout(r, 150));
   check('reviews: no uncaught errors', errors.length === 0, errors.join(' | '));
+  check('reviews: sound test button does not throw', (() => {
+    const btn = doc.querySelector('#sound-test-btn');
+    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    return errors.length === 0;
+  })(), errors.join(' | '));
   check('reviews: sound toggle does not throw', (() => {
     const btn = doc.querySelector('#sound-toggle-btn');
     btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));

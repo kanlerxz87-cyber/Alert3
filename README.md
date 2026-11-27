@@ -130,6 +130,36 @@ mlb.com uses, re-implemented from scratch in vanilla HTML/CSS/JS.
   single number with a matchup tier (Elite → Pitcher's edge) and per-driver point
   adjustments. It appears in the live at-bat card, the Props & Matchup tab, and
   completed PBP rows.
+- **Three poll lanes, sized for what they carry** (`reviews.html`) — the Replay
+  Feed no longer runs one loop whose cadence has to serve both a 2 KB status
+  check and a multi-hundred-KB play-by-play payload:
+  - **status lane, 125 ms** — one lean slate request
+    (`/api/v1/schedule?fields=…gamePk,status…`, no hydrations). MLB flips
+    `status.statusCode` the instant a review is *called*, before any play text
+    exists, so this is what makes a challenge appear as early as the API
+    publishes it. On a flip the page fetches that game's state and play-by-play
+    out of band instead of waiting for either slower lane.
+  - **state lane, 500 ms** — per live game,
+    `/api/v1.1/game/{gamePk}/feed/live?fields=…` with a projection that keeps
+    the linescore, count, outs, batter, pitcher, official pitch counters and the
+    review/ABS counters and drops the box score. Every response is captured by
+    `assets/js/game-state.js` with a to-the-second timestamp.
+  - **play lane, 1000 ms** — per live game, `/playByPlay?fields=…`: the
+    `reviewDetails` blocks, `os_ruling_pending_*` and the classification diff
+    that reveals an official scoring change. A score change, a new at-bat, a
+    status flip or a pending ruling also triggers an immediate fetch, so one
+    second is only the worst case.
+  Lanes share an adaptive throttle: if MLB answers **HTTP 429** the lanes back
+  off (×2 up to ×6) instead of every request being dropped for a long quiet
+  window, and the status line says the page is throttled.
+- **Latency is measured, not claimed.** Every response's own
+  `metaData.timeStamp` (the API's last update time — the same timecode its
+  `feed/live/diffPatch` endpoint documents) is compared with the moment the page
+  received it, and the median/p90 **data age** is shown in the top bar (live
+  games only — a Final feed stops updating) along with the status sweeps'
+  **detection period**. MLB's own `metaData.wait` / `logicWait` pipeline fields are
+  reported beside it. When a payload carries no timestamp the page shows
+  `age —` rather than a number it cannot support.
 - Auto-refreshes: on a live game page the full feed lands every **500ms**, while
   a dedicated **125ms status watcher** catches a brand-new challenge/review the
   instant MLB flips the official game status — and paints the review banner from
@@ -217,6 +247,95 @@ baseball state changes
 table is lazy-rendered only when its tab is open. Preview and final games use
 slower cadences, and polling pauses automatically while the tab is hidden.
 
+## Replay feed: state capture, alert sound, official scoring log
+
+### Live game state, before and after
+
+`assets/js/game-state.js` turns one official response into one snapshot —
+official status (`statusCode` + `detailedState` + `reason`), inning/half/outs,
+count, score, batter, pitcher, baserunners, on-deck/in-hole, the official pitch
+counters (`numberOfPitches` / `pitchesThrown` where published, the
+plate-appearance pitch count from `playEvents` otherwise), the last recorded
+play and any review or pending-scoring state in the payload. Each snapshot
+carries `observedAt` (ms) and `observedAtISO` (second precision, local offset).
+Two snapshots differenced by `GameState.diffSnapshots()` produce the exact
+before → after pair, which is what the *Live State* rows and the state monitor
+show. Nothing is inferred: a field the payload omits stays `null` and renders
+as a dash.
+
+Captures are persisted per date in `GameState.Journal` (localStorage, newest
+seven dates, 120 snapshots per game, appended **only when the state actually
+changed**), so a refresh restores the last captured state, the history and the
+state-change rows instead of starting blank. A live game whose last capture is
+older than 15 s is recorded as an **observation gap** — the page does not imply
+it was watching while it was closed.
+
+### The alert sound
+
+One cue for the whole site, rendered by `assets/js/alert-audio.js`: a
+**three-second raindrop bloom** — soft sine droplets (G5, C6, D6, E6, G6) that
+bloom into a C-major settle, through a rising-resonance low-pass and a 0.31 s
+echo grid, with a gentle saturation stage. Pure sines under 1.6 kHz, no harsh
+harmonics, envelopes that never reach zero (no clicks), and a 2.5 s cooldown so
+a burst of events is one sound. It fires for every event that lands in the alert
+feed — challenges, crew-chief/umpire reviews, boundary calls, official-scorer
+pending rulings, official scoring changes, and runs at risk — but **not** for
+routine ABS pitch challenges, as before.
+
+Controls: **Sound On/Off** (remembered per browser; turning it on plays the cue
+once, because the click is the user gesture an AudioContext needs), **Test**
+(always audible on demand, ignores both the toggle and the cooldown, and reports
+its result in the status line — the fastest way to prove the audio path works),
+a **volume slider** (remembered), and **chime ABS** — off by default so routine
+ABS pitch challenges stay silent as documented, but one checkbox makes *every*
+row that lands in the feed sound, for an operator who wants that. Where a browser has no Web Audio the page
+says so in plain words instead of failing silently.
+
+### Official-scorer pending rulings and scoring changes — a separate section
+
+`assets/js/official-scoring-log.js` keeps an **append-only log** of:
+
+| Kind | Logged when | What it stores | Official source |
+| --- | --- | --- | --- |
+| `pending_open` | a play's `result.eventType` is `os_ruling_pending_primary` / `os_ruling_pending_prior` (the API's own registry: "Official Scorer Ruling Pending") | the exact official wording, score, batter/pitcher, second-precision timestamp | [eventTypes](https://statsapi.mlb.com/api/v1/eventTypes) |
+| `pending_resolve` | the same play later carries a decided `eventType` | the official wording **before** and **after** | [playByPlay 824638](https://statsapi.mlb.com/api/v1/game/824638/playByPlay) |
+| `scoring_change` | a completed play's classification changed (hit↔error, out↔hit, single→double, RBI/run changes) | both classifications, the official score after, and the attribution | [mlb.com scoring changes](https://www.mlb.com/official-information/scoring-changes) · [playByPlay 823096](https://statsapi.mlb.com/api/v1/game/823096/playByPlay) |
+| `edit` | wording/RBI/score changed with no reclassification | flagged, never "corrected" | [playByPlay 823180](https://statsapi.mlb.com/api/v1/game/823180/playByPlay) |
+| gap | a logged play disappeared, or the page was closed while a live game continued | flagged for review | [feed/live 824638](https://statsapi.mlb.com/api/v1.1/game/824638/feed/live) |
+
+The section sits below the alert feed on `reviews.html` with its own stats, an
+"open right now" block for at-bats without a final scoring call, and JSON/CSV
+export. **It is deliberately isolated from the alert system**: its own module,
+its own storage key (`mlbp.scoringlog.<date>`, newest 30 dates, 500 events per
+date, survives a refresh), its own optional server mirror
+(`POST/GET /api/scoring-log` in `server.mjs`, its own files under `data/`), and
+its own render pass. `OfficialScoring.ingest()` is wrapped in a try/catch inside
+the poll loop: when the log throws, the failure is flagged on the feed and
+**the alerts keep firing** — there is a regression test for exactly that.
+
+### Suggestions for the latency work (implemented where possible, flagged where not)
+
+1. **Use the diff endpoints before adding requests.** `feed/live/diffPatch`
+   (`?startTimecode=MMDDYYYY_HHMMSS`) and `playByPlay?timecode=` return only what
+   changed. `MLB.gameFeedPatch()` / `MLB.playByPlaySince()` and the timecode
+   helpers ship here, but the patch response can be *either* RFC-6902 operations
+   or a whole feed object, and patch paths address fields a render path has to
+   re-derive — so switching the lanes onto it needs a live game to verify
+   against. It is implemented and tested as an API, not yet used by the lanes;
+   see `flagged.html` §17.
+2. **Use the Gameday push socket where the host allows it.**
+   `wss://ws.statsapi.mlb.com/api/v1/game/push/subscribe/gameday/{gamePk}` is
+   what MLB.com's own Gameday client uses; it carries the `pushUpdateId` that
+   makes `diffPatch` incremental. GitHub Pages is a static host with no server
+   component, so this is the one path that needs the optional `server.mjs`
+   deployment story rather than the static site.
+3. **Cap the fan-out.** 15 simultaneous games × 2 lanes is fine at 500 ms/1 s
+   with a small concurrency limit (8) and a shared throttle; it is not fine at
+   125 ms. That is why only the lean slate status request runs at 125 ms.
+4. **Measure, never assume.** The data-age figure comes from the payload's own
+   timestamp. During the offseason there is no live sample, so the page shows
+   `age —` instead of a fabricated number (flagged as unverified below).
+
 ## Two-sided hit forecast
 
 The hit percentage is a **transparent, per-plate-appearance estimate** — not an MLB
@@ -294,12 +413,15 @@ for archived games the request is scoped to the feed's game season.
 │       ├── api.js             # MLB StatsAPI client (fetch, retry, fallbacks, formatters)
 │       ├── ui.js              # Shared UI: team logos, colors, count dots, runners diamond
 │       ├── reviews.js         # Challenge & replay review parser (Manager, Crew Chief, ABS)
-│       ├── reviews-feed.js    # All-games Replay Feed logic (diff helpers + page)
+│       ├── reviews-feed.js    # All-games Replay Feed: 125/500/1000 ms lanes + page
+│       ├── game-state.js      # Official live-state capture, diffs, refresh-proof journal
+│       ├── alert-audio.js     # The shared 3-second raindrop alert cue
+│       ├── official-scoring-log.js # Append-only official-scorer pending/change log (isolated)
 │       ├── scoreboard.js      # Scoreboard page logic
 │       ├── feed-log.js        # Per-date feed log: localStorage + optional server.mjs sync/SSE
 │       ├── props.js           # Two-sided hit model, stat cache, Props & Matchup tab
 │       └── game.js            # Game page logic (live "at bat" module, linescore, box, PBP)
-├── server.mjs                 # Optional zero-dependency persistence server (static + feed log)
+├── server.mjs                 # Optional zero-dependency persistence server (static + feed log + scoring log)
 ├── tests/                     # Zero-network checks: link check, jsdom render test, fixtures
 ├── docs/verification-report.md# Field-by-field verification with official source links
 └── COORDINATION.md            # Multi-session task board, claims, merge + deployment record
