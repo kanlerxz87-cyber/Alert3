@@ -36,6 +36,12 @@ button, volume persistence), `tests/jsdom-render-test.mjs` (+6 element checks),
 Results: `smoke-test` **89/89** · `jsdom-render-test` **56/56** · `run-all` **all PASS** ·
 `restoration-check` **ALL CHECKS PASSED** · `props-provenance-test` **5/5**.
 
+**Shipped:** [PR #11](https://github.com/kanlerxz87-cyber/Alert3/pull/11) opened from
+`arena/80d92e25-alert3`, checks `test` / `dom-smoke` / `official-sources` all **pass**, merged
+`2026-11-27T03:28:32Z` as [`6f3fca4`](https://github.com/kanlerxz87-cyber/Alert3/commit/6f3fca4cb57ac4c735244da933e049d4dd52104b);
+GitHub Pages [build](https://api.github.com/repos/kanlerxz87-cyber/Alert3/pages/builds?per_page=1)
+for that commit reached `built`. This note is a board-only follow-up PR and changes no site code.
+
 Unverified (offseason, no live game on 2026-11-27) and published on
 [`flagged.html` §17](https://kanlerxz87-cyber.github.io/Alert3/flagged.html#latency-2026-11-27):
 observed live detection times, rate-limit headroom, the diffPatch transport (implemented, not enabled),
