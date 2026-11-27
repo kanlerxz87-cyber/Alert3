@@ -66,10 +66,33 @@ try {
   ok(get.status === 200 && JSON.parse(get.body).date === '2024-06-01', 'server: GET /api/feed-log round-trip');
   for (const p of ['/', '/index.html', '/game.html', '/reviews.html', '/flagged.html',
                    '/assets/css/style.css', '/assets/js/api.js', '/assets/js/game.js',
-                   '/assets/js/scoreboard.js', '/assets/js/reviews-feed.js']) {
+                   '/assets/js/scoreboard.js', '/assets/js/reviews-feed.js',
+                   '/assets/js/game-state.js', '/assets/js/alert-audio.js',
+                   '/assets/js/official-scoring-log.js']) {
     const res = await req('GET', p);
     ok(res.status === 200 && res.body.length > 0, `server: GET ${p} -> 200`);
   }
+  /* Independent official-scoring store (own endpoints, own files). */
+  const scorePost = await req('POST', '/api/scoring-log', JSON.stringify({
+    v: 1, date: '2024-06-01', events: [
+      { id: 'g1:3:pending:1000', kind: 'pending_open', status: 'open', gamePk: 1, at: 1000 },
+      { id: 'g1:3:change:single>double:2000', kind: 'scoring_change', status: 'reclassified', gamePk: 1, at: 2000 },
+    ], open: { 'g1:3': 'g1:3:pending:1000' }, plays: {}, games: {}, gaps: [],
+  }));
+  ok(scorePost.status === 200 && JSON.parse(scorePost.body).ok === true, 'server: POST /api/scoring-log');
+  const scoreGet = await req('GET', '/api/scoring-log?date=2024-06-01');
+  const scoreLog = JSON.parse(scoreGet.body);
+  ok(scoreGet.status === 200 && scoreLog.events.length === 2, 'server: GET /api/scoring-log round-trip');
+  const scoreRewrite = await req('POST', '/api/scoring-log', JSON.stringify({
+    v: 1, date: '2024-06-01', events: [
+      { id: 'g1:3:pending:1000', kind: 'pending_open', status: 'closed', at: 1000, closedAt: 3000 },
+    ], open: {}, plays: {}, games: {}, gaps: [],
+  }));
+  const afterRewrite = JSON.parse((await req('GET', '/api/scoring-log?date=2024-06-01')).body);
+  ok(scoreRewrite.status === 200 && afterRewrite.events.length === 2 &&
+    afterRewrite.events.find((e) => e.kind === 'pending_open').status === 'closed',
+    'server: the scoring log is append-only (no duplicate rows, only the close is applied)');
+  ok(Object.keys(afterRewrite.open).length === 0, 'server: a closed pending ruling leaves the open map');
   const dotRes = await req('GET', '/.git/HEAD');
   ok(dotRes.status === 403, 'server: GET /.git/HEAD -> 403');
   const zeroMergeA = await req('POST', '/api/feed-log', JSON.stringify({
@@ -83,6 +106,7 @@ try {
   // clean up the test artifact the POST wrote
   fs.rmSync(path.join(ROOT, 'data', 'feed-log-2024-06-01.json'), { force: true });
   fs.rmSync(path.join(ROOT, 'data', 'feed-log-index.json'), { force: true });
+  fs.rmSync(path.join(ROOT, 'data', 'scoring-log-2024-06-01.json'), { force: true });
   try { fs.rmdirSync(path.join(ROOT, 'data')); } catch { /* data/ pre-existed */ }
 } catch (e) {
   ok(false, 'server contract: ' + e.message);

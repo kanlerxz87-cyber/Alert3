@@ -191,6 +191,105 @@ function mergeFeedLogPayloads(existing, incoming, dateStr) {
   };
 }
 
+/* ------------------------------------------------ official scoring log store
+ * A second, independent store: official-scorer pending rulings and scoring
+ * changes only. It is written by assets/js/official-scoring-log.js with its own
+ * endpoints and its own files, so a problem here can never touch the alert
+ * feed log above (and vice versa).
+ *
+ *   GET  /api/scoring-log?date=YYYY-MM-DD   -> one date's append-only log
+ *   POST /api/scoring-log                   -> append + merge, then persist
+ *
+ * Appends are the only operation: events are keyed by id and an existing event
+ * is never rewritten (except the closing status of a pending ruling, which is
+ * what the collector itself does).
+ */
+function scoringLogFilePath(dateStr) {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+  return path.join(DATA_DIR, `scoring-log-${dateStr}.json`);
+}
+
+function readScoringLog(dateStr) {
+  const filePath = scoringLogFilePath(dateStr);
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (err) {
+    console.warn(`[server] failed to read scoring log for ${dateStr}:`, err);
+    return null;
+  }
+}
+
+function mergeScoringLogs(existing, incoming, dateStr) {
+  const base = (existing && existing.v === 1) ? existing : { v: 1, date: dateStr, events: [], open: {}, plays: {}, games: {}, gaps: [] };
+  const map = new Map();
+  const order = [];
+  function take(event) {
+    if (!event || !event.id) return;
+    const prev = map.get(event.id);
+    if (!prev) {
+      map.set(event.id, event);
+      order.push(event.id);
+      return;
+    }
+    /* Never overwrite an observation; only apply the pending-ruling close. */
+    if (prev.kind === 'pending_open' && event.status === 'closed') {
+      prev.status = 'closed';
+      prev.closedAt = event.closedAt || event.at;
+      prev.closedAtISO = event.closedAtISO || event.atISO;
+      if (event.after) prev.after = event.after;
+    }
+  }
+  (Array.isArray(base.events) ? base.events : []).forEach(take);
+  (Array.isArray(incoming.events) ? incoming.events : []).forEach(take);
+
+  const events = order.map((id) => map.get(id)).filter(Boolean)
+    .sort((a, b) => (Number(a.at) || 0) - (Number(b.at) || 0))
+    .slice(-500);
+
+  const open = { ...(base.open || {}), ...(incoming.open || {}) };
+  Object.keys(open).forEach((key) => {
+    const found = events.some((e) => e.id === open[key] && e.kind === 'pending_open' && e.status !== 'closed');
+    if (!found) delete open[key];
+  });
+
+  const plays = { ...(base.plays || {}) };
+  Object.keys(incoming.plays || {}).forEach((pk) => {
+    plays[pk] = { ...(plays[pk] || {}), ...(incoming.plays[pk] || {}) };
+  });
+
+  const gaps = [...(Array.isArray(base.gaps) ? base.gaps : [])];
+  (Array.isArray(incoming.gaps) ? incoming.gaps : []).forEach((g) => {
+    if (typeof g === 'string' && !gaps.includes(g)) gaps.push(g);
+  });
+
+  return {
+    v: 1,
+    date: dateStr,
+    savedAt: Date.now(),
+    events,
+    open,
+    plays,
+    games: { ...(base.games || {}), ...(incoming.games || {}) },
+    gaps: gaps.slice(-60),
+  };
+}
+
+function writeScoringLog(dateStr, payload) {
+  const filePath = scoringLogFilePath(dateStr);
+  if (!filePath) return false;
+  try {
+    const merged = mergeScoringLogs(readScoringLog(dateStr), payload, dateStr);
+    const tempPath = `${filePath}.tmp.${Date.now()}`;
+    fs.writeFileSync(tempPath, JSON.stringify(merged, null, 2), 'utf8');
+    fs.renameSync(tempPath, filePath);
+    return merged;
+  } catch (err) {
+    console.error(`[server] failed to write scoring log for ${dateStr}:`, err);
+    return false;
+  }
+}
+
 /* --------------------------------------------------------------- push (SSE)
  * Live tail of the shared feed log. Polling it (GET /api/feed-log) leaves a
  * window of up to the poll interval between "another browser/session wrote an
@@ -320,6 +419,51 @@ const server = http.createServer((req, res) => {
     // idempotently, exactly like its ordinary GET).
     const current = readLogFromDisk(dateStr);
     if (current) sseWrite(res, `event: feed-log\ndata: ${JSON.stringify(current)}\n\n`);
+    return;
+  }
+
+  // GET /api/scoring-log?date=YYYY-MM-DD — official-scorer pending / scoring changes
+  if (pathname === '/api/scoring-log' && req.method === 'GET') {
+    const dateStr = reqUrl.searchParams.get('date');
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      sendError(res, 400, 'date query parameter in YYYY-MM-DD format is required');
+      return;
+    }
+    const log = readScoringLog(dateStr);
+    sendJSON(res, 200, log || { v: 1, date: dateStr, savedAt: Date.now(), events: [], open: {}, plays: {}, games: {}, gaps: [] });
+    return;
+  }
+
+  // POST /api/scoring-log — append-only merge of one date's scoring log
+  if (pathname === '/api/scoring-log' && req.method === 'POST') {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > 20 * 1024 * 1024) {
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Payload too large' }));
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body);
+        if (!payload || typeof payload !== 'object' || payload.v !== 1 || !payload.date ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
+          sendError(res, 400, 'Invalid payload: must be object with v: 1 and valid date (YYYY-MM-DD)');
+          return;
+        }
+        const saved = writeScoringLog(payload.date, payload);
+        if (saved) {
+          sendJSON(res, 200, { ok: true, date: payload.date, savedAt: saved.savedAt, eventsCount: saved.events.length });
+        } else {
+          sendError(res, 500, 'Failed to save scoring log to disk');
+        }
+      } catch (err) {
+        sendError(res, 400, `JSON parse error: ${err.message}`);
+      }
+    });
     return;
   }
 

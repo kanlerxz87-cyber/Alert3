@@ -194,6 +194,15 @@ const PBP_823109 = {
 };
 
 const FEED_823109 = {
+  /* metaData.timeStamp / wait / logicWait are the fields the state lane reads
+   * (GET /api/v1.1/game/{gamePk}/feed/live metaData). Shape per the StatsAPI's
+   * own diffPatch documentation: timeStamp is MMDDYYYY_HHMMSS in UTC, wait and
+   * logicWait are seconds. */
+  metaData: {
+    wait: 10,
+    logicWait: 0,
+    timeStamp: '09152026_231245',
+  },
   gameData: {
     game: { pk: 823109, season: 2026, seriesGameNumber: 2, gamesInSeries: 3 },
     status: { abstractGameState: 'Live', codedGameState: 'M', detailedState: 'Manager challenge: Tag play', statusCode: 'MA', reason: 'Tag play' },
@@ -365,7 +374,12 @@ async function boot(file, { query = '', beforeParse, fetchImpl } = {}) {
     pretendToBeVisual: true,
     virtualConsole,
     beforeParse(window) {
-      window.fetch = (url) => (fetchImpl || routeFetch)(url);
+      const requests = [];
+      window.__requests = requests;
+      window.fetch = (url) => {
+        requests.push(String(url));
+        return (fetchImpl || routeFetch)(url);
+      };
       window.AbortController = window.AbortController || class { constructor() { this.signal = { aborted: false, addEventListener() {} }; } abort() { this.signal.aborted = true; } };
       window.scrollTo = () => {};
       if (typeof window.EventSource !== 'function') {
@@ -382,6 +396,7 @@ async function boot(file, { query = '', beforeParse, fetchImpl } = {}) {
   }
   await new Promise((r) => setTimeout(r, 120));
   dom.__bootErrors = bootErrors;
+  dom.__requests = dom.window.__requests || [];
   return dom;
 }
 
@@ -1332,6 +1347,393 @@ console.log('\n[14] Alert3 regression checks — upcoming scheduled game days & 
     assert(regNotes.length === 0, 'normal failed manager/ABS challenge must not emit counter regression irregularity: ' + JSON.stringify(regNotes));
     upDom.window.close();
   });
+}
+
+console.log('\n[15] latency lanes, live-state capture, alert sound and the separate official-scoring log');
+{
+  /* --- 15a. GameState.capture / diffSnapshots (pure, no page) --- */
+  const gsDom = await boot('reviews.html', { fetchImpl: () => Promise.resolve({ ok: false, status: 404, json: async () => ({}) }) });
+  const GS = gsDom.window.GameState;
+
+  await check('G-4: capture() reads the official state fields, including pitch counters and pending rulings', () => {
+    const snap = GS.capture({
+      gamePk: 823109,
+      observedAt: Date.UTC(2026, 8, 15, 23, 12, 47),
+      feed: FEED_823109,
+    });
+    assert(snap.gamePk === 823109, 'gamePk not captured');
+    assert(snap.score.away === 3 && snap.score.home === 4, 'score not read: ' + JSON.stringify(snap.score));
+    assert(snap.inningLabel === 'Top 8', 'inning label, got ' + snap.inningLabel);
+    assert(snap.outs === 1, 'outs, got ' + snap.outs);
+    assert(snap.count.balls === 2 && snap.count.strikes === 1, 'count, got ' + JSON.stringify(snap.count));
+    assert(snap.batter && snap.batter.name === 'Test Batter', 'batter, got ' + JSON.stringify(snap.batter));
+    assert(snap.pitcher && snap.pitcher.name === 'Test Pitcher', 'pitcher, got ' + JSON.stringify(snap.pitcher));
+    assert(snap.pitch && snap.pitch.pitcherPitches === null, 'absent official pitch counter must stay null, got ' + JSON.stringify(snap.pitch));
+    assert(snap.pitch.paPitches === 0, 'PA pitch count from playEvents, got ' + snap.pitch.paPitches);
+    assert(snap.status.code === 'MA', 'status code, got ' + snap.status.code);
+    assert(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(snap.observedAtISO),
+      'timestamp must be second-precision ISO, got ' + snap.observedAtISO);
+    assert(snap.runners && snap.runners.first && snap.runners.first.id === 621566, 'runner on first not captured');
+    assert(snap.pending.length === 1 && snap.pending[0].eventType === 'os_ruling_pending_primary', 'pending ruling not captured');
+    assert(snap.reviews.length >= 1, 'play-level reviews not captured');
+    assert(snap.officialTimeStamp === '09152026_231245', 'metaData.timeStamp not kept, got ' + snap.officialTimeStamp);
+  });
+
+  await check('G-4: pitch counters come from the official player record when published', () => {
+    const feed = JSON.parse(JSON.stringify(FEED_823109));
+    feed.gameData.players.ID592789.stats.pitching.numberOfPitches = 94;
+    const snap = GS.capture({ gamePk: 823109, feed: feed });
+    assert(snap.pitch.pitcherPitches === 94, 'official numberOfPitches not read, got ' + snap.pitch.pitcherPitches);
+  });
+
+  await check('G-4: diffSnapshots reports material changes and nothing on a first snapshot', () => {
+    const a = GS.capture({ gamePk: 823109, feed: FEED_823109 });
+    const b = GS.capture({ gamePk: 823109, feed: FEED_823109 });
+    assert(GS.diffSnapshots(null, a).length === 0, 'a first snapshot must not invent a before state');
+    assert(GS.diffSnapshots(a, b).length === 0, 'identical snapshots must not report changes');
+    const moved = JSON.parse(JSON.stringify(FEED_823109));
+    moved.liveData.linescore.teams.away.runs = 4;
+    moved.liveData.linescore.outs = 2;
+    const c = GS.capture({ gamePk: 823109, feed: moved });
+    const changes = GS.diffSnapshots(a, c);
+    const keys = changes.map((x) => x.key);
+    assert(keys.indexOf('score') !== -1 && keys.indexOf('outs') !== -1, 'score/outs change missed: ' + keys.join(','));
+    const scoreChange = changes.find((x) => x.key === 'score');
+    assert(scoreChange.from.away === 3 && scoreChange.to.away === 4, 'exact before/after wording missing: ' + JSON.stringify(scoreChange));
+  });
+
+  await check('G-4: stateLine() is exact official wording (status, inning, outs, count, score, batter/pitcher)', () => {
+    const snap = GS.capture({ gamePk: 823109, feed: FEED_823109 });
+    const line = GS.stateLine(snap);
+    assert(/Manager challenge: Tag play/.test(line), 'detailedState missing: ' + line);
+    assert(/Top 8/.test(line) && /1 out/.test(line) && /2-1 count/.test(line) && /3–4/.test(line), 'state line incomplete: ' + line);
+    assert(/Test Batter/.test(line) && /Test Pitcher/.test(line), 'batter/pitcher missing: ' + line);
+  });
+
+  await check('G-4: data age is measured against metaData.timeStamp, and stays null when absent', () => {
+    const observedAt = gsDom.window.MLB.timecodeToMs('09152026_231245') + 1700;
+    const snap = GS.capture({ gamePk: 823109, feed: FEED_823109, observedAt: observedAt });
+    const age = observedAt - gsDom.window.MLB.timecodeToMs(snap.officialTimeStamp);
+    assert(age === 1700, 'age arithmetic wrong: ' + age);
+    const bare = GS.capture({ gamePk: 823109, feed: { gameData: { status: { statusCode: 'I' } }, liveData: {} } });
+    assert(bare.officialTimeStamp === '', 'absent timestamp must stay empty');
+  });
+
+  await check('G-4: timecode conversion is MMDDYYYY_HHMMSS in UTC, both directions', () => {
+    const MLB = gsDom.window.MLB;
+    const ms = MLB.timecodeToMs('09152026_231245');
+    assert(ms === Date.UTC(2026, 8, 15, 23, 12, 45), 'timecode -> ms wrong: ' + ms);
+    assert(MLB.tsToTimecode('2026-09-15T23:12:45Z') === '09152026_231245', 'ms -> timecode wrong');
+    assert(MLB.tsToTimecode('09152026_231245') === '09152026_231245', 'a timecode must pass through unchanged');
+  });
+
+  await check('G-4: the journal records history only when the state actually changed, and reloads', () => {
+    const date = '2026-09-15';
+    gsDom.window.localStorage.clear();
+    const a = GS.capture({ gamePk: 823109, feed: FEED_823109, observedAt: 1000 });
+    const b = GS.capture({ gamePk: 823109, feed: FEED_823109, observedAt: 1500 });
+    const moved = JSON.parse(JSON.stringify(FEED_823109));
+    moved.liveData.linescore.outs = 2;
+    const c = GS.capture({ gamePk: 823109, feed: moved, observedAt: 2000 });
+    GS.Journal.record(date, a, { matchup: 'SEA @ MIN' });
+    GS.Journal.record(date, b, { matchup: 'SEA @ MIN' });
+    const rec = GS.Journal.record(date, c, { matchup: 'SEA @ MIN' });
+    assert(rec.snapshots.length === 2, 'only state-changing snapshots should be journalled, got ' + rec.snapshots.length);
+    const reloaded = GS.Journal.load(date);
+    assert(reloaded.games['823109'].latest.outs === 2, 'journal did not survive a reload');
+    assert(reloaded.games['823109'].matchup === 'SEA @ MIN', 'matchup label not stored with the record');
+  });
+
+  gsDom.window.close();
+
+  /* --- 15b. alert-audio: graceful without Web Audio, always playable on demand --- */
+  const audioDom = await boot('reviews.html', { fetchImpl: () => Promise.resolve({ ok: false, status: 404, json: async () => ({}) }) });
+  await check('G-5: without Web Audio the cue fails quietly and never throws', () => {
+    assert(audioDom.window.AlertAudio.available() === false, 'jsdom has no AudioContext; available() must be false');
+    const label = audioDom.window.AlertAudio.test();
+    assert(label === null, 'a silent browser must return null, not throw, got ' + label);
+    const st = audioDom.window.AlertAudio.state();
+    assert(st.durationMs === 3000, 'the cue must be a three-second sound, got ' + st.durationMs);
+  });
+  await check('G-5: the cue schedules a soft sine bloom inside three seconds (audio graph inspected)', async () => {
+    /* jsdom has no Web Audio, so the graph is stubbed and inspected: this
+     * proves what is scheduled (oscillator type, frequencies, envelopes,
+     * total length), not how it sounds. */
+    const scheduled = [];
+    const graphDom = await boot('reviews.html', {
+      fetchImpl: () => Promise.resolve({ ok: false, status: 404, json: async () => ({}) }),
+      beforeParse(win) {
+        function node(kind) {
+          return {
+            kind,
+            connect() { return this; },
+            disconnect() {},
+            gain: {
+              value: 0,
+              setValueAtTime(v, t) { scheduled.push({ node: kind, param: 'gain.set', v, t }); },
+              exponentialRampToValueAtTime(v, t) { scheduled.push({ node: kind, param: 'gain.ramp', v, t }); },
+              setTargetAtTime(v, t) { scheduled.push({ node: kind, param: 'gain.target', v, t }); },
+            },
+            frequency: {
+              value: 0,
+              setValueAtTime(v, t) { scheduled.push({ node: kind, param: 'freq.set', v, t }); },
+              exponentialRampToValueAtTime(v, t) { scheduled.push({ node: kind, param: 'freq.ramp', v, t }); },
+            },
+            Q: {
+              setValueAtTime(v, t) { scheduled.push({ node: kind, param: 'q.set', v, t }); },
+              exponentialRampToValueAtTime(v, t) { scheduled.push({ node: kind, param: 'q.ramp', v, t }); },
+            },
+            delayTime: { value: 0 },
+            type: '',
+            start(t) { scheduled.push({ node: kind, param: 'start', t }); },
+            stop(t) { scheduled.push({ node: kind, param: 'stop', t }); },
+          };
+        }
+        win.AudioContext = class {
+          constructor() {
+            this.currentTime = 0;
+            this.state = 'running';
+            this.destination = node('destination');
+          }
+          createGain() { return node('gain'); }
+          createOscillator() { return node('osc'); }
+          createBiquadFilter() { return node('filter'); }
+          createDelay() { return node('delay'); }
+          createWaveShaper() { return node('shaper'); }
+          resume() { return Promise.resolve(); }
+          suspend() { return Promise.resolve(); }
+        };
+      },
+    });
+    const AA = graphDom.window.AlertAudio;
+    assert(AA.available() === true, 'the stub must make Web Audio available');
+    const label = AA.test();
+    assert(label === 'test', 'the cue should report its label, got ' + label);
+
+    const oscStarts = scheduled.filter((x) => x.param === 'start' && x.node === 'osc');
+    assert(oscStarts.length >= 6, 'expected a multi-drop raindrop cue, got ' + oscStarts.length + ' oscillators');
+    const freqSets = scheduled.filter((x) => x.param === 'freq.set');
+    const maxFreq = Math.max.apply(null, freqSets.map((x) => x.v));
+    assert(maxFreq <= 1600, 'drops must stay below the harsh band, got ' + maxFreq + ' Hz');
+    const stopMax = Math.max.apply(null, scheduled.filter((x) => x.param === 'stop').map((x) => x.t));
+    assert(stopMax <= 3.0, 'the cue must not run past three seconds, ends at ' + stopMax.toFixed(2) + ' s');
+    const ramps = scheduled.filter((x) => x.param === 'gain.ramp');
+    assert(ramps.every((x) => x.v > 0), 'every envelope must decay to an inaudible-but-nonzero floor (no clicks)');
+    graphDom.window.close();
+  });
+
+  await check('G-5: volume is settable and clamped, cooldown is 2.5 s', () => {
+    const AA = audioDom.window.AlertAudio;
+    assert(AA.setVolume(2) === 1 && AA.setVolume(-1) === 0, 'volume must clamp to 0..1');
+    AA.setVolume(0.34);
+    assert(AA.state().cooldownMs === 2500, 'cooldown must be 2500 ms');
+  });
+  audioDom.window.close();
+
+  /* --- 15c. official-scoring-log: pending open -> resolve, scoring change, persistence --- */
+  const scoreDom = await boot('reviews.html', { fetchImpl: () => Promise.resolve({ ok: false, status: 404, json: async () => ({}) }) });
+  const OS = scoreDom.window.OfficialScoring;
+  const date = '2026-09-15';
+
+  function pendingPlay(atBatIndex, eventType, extra = {}) {
+    return Object.assign({
+      about: { atBatIndex, inning: 3, halfInning: 'top', isTopInning: true, isComplete: true },
+      result: { eventType, description: 'Official Scorer Ruling Pending', awayScore: 1, homeScore: 0 },
+      count: { balls: 0, strikes: 0, outs: 1 },
+      matchup: { batter: { fullName: 'Test Batter' }, pitcher: { fullName: 'Test Pitcher' } },
+      runners: [],
+      playEvents: [],
+    }, extra);
+  }
+
+  const ingest1 = OS.ingest({
+    date, gamePk: 823109, matchup: 'SEA @ MIN', plays: [pendingPlay(3, 'os_ruling_pending_primary')],
+    observedAt: 1000,
+  });
+  await check('G-6: an undecided at-bat is logged the second it is observed', () => {
+    assert(ingest1.added.length === 1 && ingest1.added[0].kind === 'pending_open', 'pending opening not logged');
+    assert(OS.openPending(date).length === 1, 'open pending list should hold it');
+    assert(ingest1.added[0].atISO && /\d{2}:\d{2}:\d{2}/.test(ingest1.added[0].atISO), 'event not stamped to the second');
+  });
+
+  const ingest2 = OS.ingest({
+    date, gamePk: 823109, matchup: 'SEA @ MIN',
+    plays: [pendingPlay(3, 'single', { result: { eventType: 'single', description: 'Batter singles to left.', awayScore: 1, homeScore: 0 } })],
+    observedAt: 2000,
+  });
+  await check('G-6: the decision is logged with the exact official wording before and after', () => {
+    assert(ingest2.added.some((e) => e.kind === 'pending_resolve'), 'pending resolution not logged: ' +
+      JSON.stringify(ingest2.added.map((e) => e.kind)));
+    const resolved = ingest2.added.find((e) => e.kind === 'pending_resolve');
+    assert(resolved.before.eventType === 'os_ruling_pending_primary', 'before wording missing');
+    assert(resolved.after.description === 'Batter singles to left.', 'after wording missing');
+    assert(OS.openPending(date).length === 0, 'resolved ruling must leave the open list');
+    const opened = OS.events(date).find((e) => e.kind === 'pending_open');
+    assert(opened.status === 'closed' && opened.closedAtISO, 'the opening row must be closed, not rewritten');
+  });
+
+  const ingest3 = OS.ingest({
+    date, gamePk: 823109, matchup: 'SEA @ MIN',
+    plays: [pendingPlay(3, 'double', { result: { eventType: 'double', description: 'Batter doubles to left.', awayScore: 2, homeScore: 0 } })],
+    observedAt: 3000,
+  });
+  await check('G-6: a scorer reclassification is logged as a scoring change with both wordings', () => {
+    const change = ingest3.added.find((e) => e.kind === 'scoring_change');
+    assert(!!change, 'scoring change not logged');
+    assert(change.before.eventType === 'single' && change.after.eventType === 'double', 'before/after event types missing');
+    assert(/single → double/.test(change.summary), 'summary should show the transition, got ' + change.summary);
+    assert(OS.summary(date).scoringChanges === 1, 'summary count wrong');
+  });
+
+  await check('G-6: the log is append-only and survives a "refresh" (new page, same storage)', async () => {
+    const dump = {};
+    for (let i = 0; i < scoreDom.window.localStorage.length; i += 1) {
+      const key = scoreDom.window.localStorage.key(i);
+      dump[key] = scoreDom.window.localStorage.getItem(key);
+    }
+    assert(dump['mlbp.scoringlog.' + date], 'nothing written to the scoring log store');
+    const reloaded = await boot('reviews.html?date=' + date, {
+      fetchImpl: () => Promise.resolve({ ok: false, status: 404, json: async () => ({}) }),
+      beforeParse(win) {
+        Object.keys(dump).forEach((k) => { try { win.localStorage.setItem(k, dump[k]); } catch (e) { /* ignore */ } });
+      },
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const events = reloaded.window.OfficialScoring.events(date);
+    assert(events.length === OS.events(date).length, 'events lost across refresh: ' + events.length);
+    assert(reloaded.window.OfficialScoring.summary(date).scoringChanges === 1, 'scoring change lost across refresh');
+    const html = text(reloaded.window.document.getElementById('official-scoring'));
+    assert(/Official scorer ruling pending/.test(html), 'pending row not rendered after refresh: ' + html.slice(0, 200));
+    assert(/Official scoring change/.test(html), 'scoring change not rendered after refresh');
+    assert(/Before/.test(html) && /After/.test(html), 'before/after wording not rendered');
+    reloaded.window.close();
+  });
+
+  await check('G-6: export produces the full log (JSON + CSV)', () => {
+    const json = OS.toJSON(date);
+    const parsed = JSON.parse(json);
+    assert(parsed.events.length >= 3, 'export lost events');
+    assert(/statsapi\.mlb\.com/.test(parsed.source), 'export should name its official source');
+    const csv = OS.toCSV(date);
+    assert(csv.split('\n').length >= 4, 'CSV has no data rows');
+    assert(/observed_at_iso/.test(csv.split('\n')[0]), 'CSV header missing ISO column');
+  });
+  scoreDom.window.close();
+
+  /* --- 15d. the replay feed's three lanes and isolation from the alert path --- */
+  const laneDom = await boot('reviews.html', { beforeParse(w) { w.localStorage.clear(); } });
+  await new Promise((r) => setTimeout(r, 900));
+
+  await check('G-7: the play lane asks for the lean schedule projection, not the hydrated one', () => {
+    const urls = laneDom.__requests || [];
+    assert(laneDom.window.ReplayFeed.PLAY_MS === 1000, 'play lane must be 1000 ms');
+    assert(laneDom.window.ReplayFeed.STATE_MS === 500, 'state lane must be 500 ms');
+    assert(laneDom.window.ReplayFeed.STATUS_SWEEP_MS === 125, 'status sweep must be 125 ms');
+    const scheduleUrls = urls.filter((u) => /\/schedule\?/.test(u));
+    assert(scheduleUrls.length > 0, 'no schedule request observed');
+    assert(scheduleUrls.every((u) => !/hydrate=probablePitcher/.test(u)),
+      'the loop must not pull the hydrated schedule: ' + scheduleUrls[0]);
+  });
+
+  await check('G-7: the state lane captures a snapshot per live game and renders the monitor', () => {
+    const st = laneDom.window.ReplayFeed.state;
+    const snap = st.stateSnapshots[823109];
+    assert(!!snap, 'no live-state snapshot captured');
+    assert(snap.score && snap.score.away === 3, 'captured score wrong: ' + JSON.stringify(snap.score));
+    const html = text(laneDom.window.document.getElementById('state-monitor'));
+    assert(/Live game state/.test(html), 'state monitor not rendered');
+    assert(/SEA|MIN/.test(html), 'state card missing the matchup');
+    assert(/captured/.test(html), 'monitor should report how many games are captured');
+  });
+
+  await check('G-7: the state journal is written, so a refresh restores the captured state', () => {
+    const raw = laneDom.window.localStorage.getItem('mlbp.state.' + laneDom.window.ReplayFeed.state.date);
+    assert(!!raw, 'no state journal written');
+    const parsed = JSON.parse(raw);
+    const rec = parsed.games['823109'];
+    assert(rec && rec.latest, 'journal has no latest snapshot for the live game');
+  });
+
+  await check('G-7: an alert still fires when the official-scoring log throws (isolation)', async () => {
+    const st = laneDom.window.ReplayFeed.state;
+    st.entries = st.entries.filter((e) => !(e.review && e.review.code === 'NA'));
+    const before = st.entries.length;
+    laneDom.window.OfficialScoring.ingest = () => { throw new Error('simulated scoring-log failure'); };
+    st.lastChimeAt = 0;
+    st.soundOn = true;
+    await laneDom.window.ReplayFeed.scan();
+    await new Promise((r) => setTimeout(r, 400));
+    while (st.scanning) await new Promise((r) => setTimeout(r, 50));
+    assert(!!st.officialScoringError, 'the failure should be recorded, not swallowed silently');
+    assert(st.lastChimeAt > 0, 'the alert path must keep working when the scoring log fails');
+    assert(st.entries.length >= before, 'alert rows must still be tracked');
+    assert((st.irregularities[823109] || []).some((n) => /Official scoring log failed/.test(n)),
+      'the failure should be flagged on the feed');
+    st.soundOn = false;
+  });
+
+  await check('G-5: ABS chimes stay silent by default and can be opted in, so every feed row can sound', async () => {
+    const st = laneDom.window.ReplayFeed.state;
+    assert(st.absChime === false, 'ABS chimes must be off by default');
+    const run = async (on) => {
+      laneDom.window.ReplayFeed.setAbsChime(on);
+      st.entries = st.entries.filter((e) => !(e.review && e.review.isABS));
+      st.lastChimeAt = 0;
+      st.soundOn = true;
+      await laneDom.window.ReplayFeed.scan();
+      await new Promise((r) => setTimeout(r, 400));
+      while (st.scanning) await new Promise((r) => setTimeout(r, 50));
+      const at = st.lastChimeAt;
+      st.soundOn = false;
+      return at;
+    };
+    const off = await run(false);
+    assert(off === 0 || st.entries.some((e) => e.review && e.review.isABS), 'ABS rows must still be tracked while silent');
+    const on = await run(true);
+    assert(on > 0, 'opting in must make a new ABS row chime');
+    laneDom.window.ReplayFeed.setAbsChime(false);
+    laneDom.window.localStorage.removeItem('mlbp.pref.absChime');
+  });
+
+  await check('G-7: the sweep detection period measures the interval between sweeps, not zero', () => {
+    const st = laneDom.window.ReplayFeed.state;
+    st.latency.statusReaction = [];
+    st.statusByPk = Object.create(null);   /* forget the cached status so the flip is new again */
+    st.lastSweepAt = Date.now() - 250;
+    laneDom.window.ReplayFeed.sweep();
+    return new Promise((r) => setTimeout(r, 350)).then(() => {
+      assert(st.latency.statusReaction.length >= 1,
+        'a status flip must produce a detection-period sample');
+      const sample = st.latency.statusReaction[st.latency.statusReaction.length - 1];
+      assert(sample >= 200, 'detection period must include the sweep interval, got ' + sample + ' ms');
+    });
+  });
+
+  await check('G-5: the Test button is always available and reports its result', () => {
+    const ok = laneDom.window.ReplayFeed.testAlert();
+    assert(typeof ok === 'boolean', 'testAlert must report success/failure');
+    const line = text(laneDom.window.document.getElementById('status-line'));
+    assert(/Alert sound/i.test(line), 'status line should report the sound test: ' + line);
+    assert(laneDom.window.ReplayFeed.state.lastChimeAt > 0, 'the test must stamp lastChimeAt');
+  });
+
+  await check('G-5: the sound toggle and volume controls exist and persist', () => {
+    const doc = laneDom.window.document;
+    assert(!!doc.getElementById('sound-test-btn'), 'no Test button');
+    assert(!!doc.getElementById('volume-slider'), 'no volume slider');
+    const wasOn = laneDom.window.ReplayFeed.state.soundOn;
+    if (wasOn) laneDom.window.ReplayFeed.toggleSound();
+    laneDom.window.ReplayFeed.toggleSound();
+    assert(laneDom.window.ReplayFeed.state.soundOn === true, 'toggle did not enable sound');
+    assert(laneDom.window.localStorage.getItem('mlbp.pref.sound') === '1', 'sound preference not persisted');
+    const v = laneDom.window.ReplayFeed.setVolume(55);
+    assert(Math.abs(v - 0.55) < 1e-9, 'volume not applied: ' + v);
+    assert(laneDom.window.localStorage.getItem('mlbp.pref.volume') === '0.55', 'volume not persisted');
+    laneDom.window.ReplayFeed.state.soundOn = false;
+    laneDom.window.localStorage.setItem('mlbp.pref.sound', '0');
+  });
+
+  laneDom.window.close();
 }
 
 function __setDate(dom) {

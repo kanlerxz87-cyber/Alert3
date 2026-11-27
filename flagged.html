@@ -1180,6 +1180,71 @@ node server.mjs                  # optional persistence backend (feed log + SSE)
       </tbody>
     </table>
 
+
+    <h2 id="latency-2026-11-27">17. Latency, alert sound, live game state &amp; official-scoring log (2026-11-27)</h2>
+    <p>
+      What was built is described in <a href="docs/latency-state-alerts-2026-11-27.md">docs/latency-state-alerts-2026-11-27.md</a>
+      and the README. This section lists what could <strong>not</strong> be confirmed, so the claims above it stay
+      honest. The whole section was produced during the MLB offseason (no games on 2026-11-27; the 2026
+      season ended 2026-10-28), so nothing here was observed on a live game.
+    </p>
+    <table class="verify">
+      <thead>
+        <tr><th>#</th><th>Item</th><th>What is confirmed / what is not</th><th>Official source</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>L-1</td>
+          <td class="wrap">Whether the 125 ms status sweep actually beats the play-by-play by the expected margin <em>on a live game</em>.</td>
+          <td class="wrap">The lanes, their requests and their projections are implemented and tested. No live game was available, so no observed detection time is published. The page reports its own measured <strong>data age</strong> and the status sweeps' <strong>detection period</strong> from the payloads it receives; those numbers are per-session, not claims in this document.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-11-27&fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">official schedule 2026-11-27 (0 games)</a> · <a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2027-02-19&fields=totalGames,dates,date,totalGames" target="_blank" rel="noopener">next official date 2027-02-19</a></td>
+          <td class="status-unverified">Unverified (offseason) — flagged</td>
+        </tr>
+        <tr>
+          <td>L-2</td>
+          <td class="wrap">Rate-limit headroom: whether ~15 live games × (500 ms state + 1000 ms play) is inside what statsapi.mlb.com tolerates.</td>
+          <td class="wrap">Not documented by MLB. Mitigations shipped instead of a claim: one shared concurrency cap (8), a lean projection on every lane, and an adaptive throttle (×2 up to ×6 on HTTP 429, decaying back) shown in the status line.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-08-28&fields=totalGames" target="_blank" rel="noopener">15-game slate 2026-08-28</a> · <a href="https://statsapi.mlb.com/api/v1/game/824638/playByPlay" target="_blank" rel="noopener">playByPlay 824638</a></td>
+          <td class="status-flag">Unknown, mitigated — flagged</td>
+        </tr>
+        <tr>
+          <td>L-3</td>
+          <td class="wrap">`feed/live/diffPatch` and `playByPlay?timecode=` as the primary transport.</td>
+          <td class="wrap"><code>MLB.gameFeedPatch()</code> / <code>MLB.playByPlaySince()</code> and both directions of the <code>MMDDYYYY_HHMMSS</code> conversion are implemented and unit-tested, but the lanes do <strong>not</strong> use them yet: the patch response can be RFC-6902 operations <em>or</em> a whole feed object, and its paths address fields the render path re-derives. Switching over needs a live game to prove it.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1.1/game/531321/feed/live/diffPatch?startTimecode=20180823_193704&endTimecode=20180823_193711" target="_blank" rel="noopener">diffPatch example</a> · <a href="https://statsapi.mlb.com/api/v1/game/565900/playByPlay?timecode=20190412_234528" target="_blank" rel="noopener">playByPlay timecode example</a></td>
+          <td class="status-flag">Implemented, not enabled — flagged</td>
+        </tr>
+        <tr>
+          <td>L-4</td>
+          <td class="wrap">The Gameday push socket (<code>wss://ws.statsapi.mlb.com/…/push/subscribe/gameday/{gamePk}</code>) as a lower-latency path.</td>
+          <td class="wrap">Documented for MLB.com's own Gameday client and used by third-party projects, but not exercised here and not usable from the static GitHub Pages deployment without a server component. Not implemented.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1.1/game/531321/feed/live/diffPatch?startTimecode=20180823_193704&endTimecode=20180823_193711" target="_blank" rel="noopener">diffPatch (same push pipeline)</a></td>
+          <td class="status-flag">Not implemented — flagged</td>
+        </tr>
+        <tr>
+          <td>A-1</td>
+          <td class="wrap">How the new alert sound actually <em>sounds</em>.</td>
+          <td class="wrap">The scheduled graph is verified (pure sines, ≤ 1600 Hz, 8 droplets, last stop ≤ 3.0 s, non-zero envelope floors, 0.31 s echo grid, 2.5 s cooldown) with a stubbed <code>AudioContext</code>. Perceptual pleasantness for all-day listening cannot be proven by a test; the shipped cue is the best available approximation and the volume control makes it adjustable. Routine ABS chimes are opt-in (off by default).</td>
+          <td class="wrap"><a href="https://github.com/kanlerxz87-cyber/Alert3/blob/main/assets/js/alert-audio.js" target="_blank" rel="noopener">alert-audio.js</a></td>
+          <td class="status-unverified">Not measurable — flagged</td>
+        </tr>
+        <tr>
+          <td>G-8</td>
+          <td class="wrap">Live capture of a real pending ruling or scoring change end to end.</td>
+          <td class="wrap">The parser, the log, the second-precision timestamps, the before/after wording, the refresh restore, the append-only merge and the alert isolation are all exercised against official-shaped fixtures. No real <code>os_ruling_pending_*</code> event was observed during this session (offseason), and MLB publishes no scoring-change marker at all, so a change is only detectable by comparing consecutive observations.</td>
+          <td class="wrap"><a href="https://statsapi.mlb.com/api/v1/eventTypes" target="_blank" rel="noopener">eventTypes (os_ruling_pending_*)</a> · <a href="https://www.mlb.com/official-information/scoring-changes" target="_blank" rel="noopener">mlb.com scoring changes</a></td>
+          <td class="status-unverified">Unverified live — flagged</td>
+        </tr>
+        <tr>
+          <td>G-9</td>
+          <td class="wrap">Cross-device persistence of the scoring log on GitHub Pages.</td>
+          <td class="wrap">On Pages there is no server: the log persists per browser (30 dates) and survives refresh/reopen, but is not shared between devices. The shared store exists only with <code>node server.mjs</code> (<code>/api/scoring-log</code>), which the section states in its own header.</td>
+          <td class="wrap"><a href="https://github.com/kanlerxz87-cyber/Alert3/blob/main/server.mjs" target="_blank" rel="noopener">server.mjs</a> · <a href="https://github.com/kanlerxz87-cyber/Alert3/blob/main/assets/js/official-scoring-log.js" target="_blank" rel="noopener">official-scoring-log.js</a></td>
+          <td class="status-flag">Host limitation — flagged</td>
+        </tr>
+      </tbody>
+    </table>
+
   </main>
 
   <footer class="site-footer">

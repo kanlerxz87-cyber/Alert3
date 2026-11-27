@@ -18,6 +18,7 @@
   <link rel="dns-prefetch" href="https://statsapi.mlb.com">
   <link rel="dns-prefetch" href="https://www.mlbstatic.com">
   <link rel="dns-prefetch" href="https://img.mlbstatic.com">
+  <link rel="dns-prefetch" href="https://ws.statsapi.mlb.com">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="page-reviews">
@@ -36,11 +37,22 @@
     </div>
     <div id="date-label" class="date-label"></div>
     <div class="feed-controls">
-      <button id="sound-toggle-btn" class="btn btn-ghost" title="Toggle alert sound — a gentle raindrop chime for new challenges/reviews/boundary calls, official-scorer pending rulings and official scoring changes (not ABS), and the same chime whenever an active review could remove a run already on the scoreboard">🔇 Sound Off</button>
+      <button id="sound-toggle-btn" class="btn btn-ghost" aria-pressed="false" title="Toggle alert sound — a 3-second raindrop bloom for new challenges/reviews/boundary calls, official-scorer pending rulings and official scoring changes (not routine ABS), and the same cue whenever an active review could remove a run already on the scoreboard. Turning it on plays the cue once so you hear exactly what an alert sounds like.">🔇 Sound Off</button>
+      <button id="sound-test-btn" class="btn btn-ghost" title="Play the alert sound now, regardless of the on/off toggle — the fastest way to prove the audio path works">🔔 Test</button>
+      <label class="volume-control" title="Alert volume — remembered in this browser">
+        <span class="volume-icon" aria-hidden="true">🔈</span>
+        <input id="volume-slider" type="range" min="0" max="100" step="5" value="34" aria-label="Alert volume">
+        <span id="volume-label" class="volume-value">34%</span>
+      </label>
+      <label class="abs-chime-control" title="Off by default: routine ABS pitch challenges are tracked but silent (the documented behaviour). Turn this on to chime for them too, so every row that lands in the feed makes a sound."> 
+        <input id="abs-chime-toggle" type="checkbox" aria-label="Also chime for ABS pitch challenges">
+        <span>chime ABS</span>
+      </label>
       <button id="notify-toggle-btn" class="btn btn-ghost" title="Toggle desktop notifications for run-at-risk reviews — a popup the moment an active review could take a run off the scoreboard">⚪ Run Alerts Off</button>
       <button id="refresh-btn" class="btn">Refresh</button>
-      <span class="countdown" id="countdown" title="Seconds until the next poll"></span>
-      <div class="live-pill" title="Polling the MLB StatsAPI">
+      <span class="countdown" id="countdown" title="Seconds until the next play-by-play poll"></span>
+      <div id="latency-pill" class="latency-pill" title="Median data age, measured against each response's own metaData.timeStamp">⚡ lag —</div>
+      <div class="live-pill" title="Polling the MLB StatsAPI: status sweep 125 ms · state 500 ms · play-by-play 1000 ms">
         <span id="live-dot" class="live-dot"></span><span>LIVE</span>
       </div>
     </div>
@@ -58,6 +70,27 @@
     <section id="feed-list" class="feed-list" aria-live="polite"></section>
 
     <div id="status-line" class="status-line"></div>
+
+    <!-- Live game state: every game on the slate, sampled twice a second and
+         timestamped to the second. Restored from the journal after a refresh. -->
+    <section id="state-monitor" class="state-monitor-wrap" aria-label="Live game state monitor"></section>
+
+    <!-- Official-scorer pending rulings and scoring changes. Deliberately
+         separate from the alert feed above: its own store, its own render. -->
+    <section class="official-scoring-section" aria-labelledby="official-scoring-heading">
+      <h2 id="official-scoring-heading" class="section-heading">
+        ✏️ Official scoring — pending rulings &amp; scoring changes
+        <span id="scoring-count" class="section-badge" style="display:none">0</span>
+      </h2>
+      <p class="section-note">
+        At-bats that have not been scored yet (<code>os_ruling_pending_primary</code> /
+        <code>os_ruling_pending_prior</code>) and every official scoring change, logged with the exact
+        official wording before and after and stamped to the second. Kept in its own persistent log
+        (30 days, survives a refresh) and deliberately isolated from the alert system, so nothing here
+        can affect an alert. <span id="sound-status" class="sound-status" hidden></span>
+      </p>
+      <div id="official-scoring" class="official-scoring"></div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -116,6 +149,9 @@
   <script src="assets/js/ui.js"></script>
   <script src="assets/js/reviews.js"></script>
   <script src="assets/js/feed-log.js"></script>
+  <script src="assets/js/game-state.js"></script>
+  <script src="assets/js/alert-audio.js"></script>
+  <script src="assets/js/official-scoring-log.js"></script>
   <script src="assets/js/reviews-feed.js"></script>
 </body>
 </html>
